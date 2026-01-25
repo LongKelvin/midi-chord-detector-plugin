@@ -67,8 +67,8 @@ constexpr ChordTemplate CHORD_TEMPLATES[] = {
     
     // ========== MAJOR FAMILY ==========
     
-    // Major Triad: C-E-G
-    {"maj", "Major",
+    // Major Triad: C-E-G (displayed as just "C", not "Cmaj")
+    {"", "Major",
      {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.0f, 0.0f},
      1, 1.0f, false},
     

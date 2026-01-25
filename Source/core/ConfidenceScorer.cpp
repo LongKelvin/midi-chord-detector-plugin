@@ -81,6 +81,14 @@ float ConfidenceScorer::calculateIntervalCoverage(
     const ChordHypothesis& hyp
 ) const
 {
+    // H-WCTM path: use cosineSimilarity directly
+    if (hyp.cosineSimilarity > 0.0f)
+    {
+        // Cosine similarity is already 0-1, just return it
+        return hyp.cosineSimilarity;
+    }
+    
+    // Legacy path: use requiredMatched / requiredTotal
     if (hyp.requiredTotal <= 0)
         return 0.0f;
     
@@ -97,8 +105,16 @@ float ConfidenceScorer::calculateMissingCorePenalty(
     const ChordHypothesis& hyp
 ) const
 {
-    // Penalty for missing core tones
-    // The hypothesis already tracks this
+    // H-WCTM path: no penalty if we have high cosine similarity
+    if (hyp.cosineSimilarity > 0.0f)
+    {
+        // Invert similarity: high similarity = low penalty
+        // 0.9 similarity -> 0.1 * 0.5 = 0.05 penalty
+        // 0.5 similarity -> 0.5 * 0.5 = 0.25 penalty
+        return (1.0f - hyp.cosineSimilarity) * 0.5f;
+    }
+    
+    // Legacy path: penalty for missing core tones
     if (hyp.requiredTotal <= 0)
         return 0.0f;
     
@@ -121,25 +137,22 @@ float ConfidenceScorer::calculateBassAlignment(
     if (hyp.bassPitchClass == hyp.rootPitchClass)
         return 1.0f;
     
-    // Bass is a chord tone (inversion) = medium score
-    const ChordFormula& formula = CHORD_FORMULAS[hyp.formulaIndex];
+    // Calculate bass interval relative to root
     int bassInterval = (bassPitchClass - hyp.rootPitchClass + 12) % 12;
     
-    // Check if bass is in required intervals
-    for (int i = 0; i < formula.requiredCount; ++i)
-    {
-        if (formula.requiredIntervals[i] == bassInterval)
-            return 0.7f;  // Inversion
-    }
+    // Common chord tone intervals (don't need formula lookup):
+    // 3 = minor 3rd, 4 = major 3rd, 7 = perfect 5th
+    // 10 = minor 7th, 11 = major 7th
+    if (bassInterval == 3 || bassInterval == 4 || bassInterval == 7)
+        return 0.7f;  // Standard inversion (3rd or 5th in bass)
     
-    // Check if bass is in optional intervals
-    for (int i = 0; i < formula.optionalCount; ++i)
-    {
-        if (formula.optionalIntervals[i] == bassInterval)
-            return 0.5f;  // Extension in bass
-    }
+    if (bassInterval == 10 || bassInterval == 11)
+        return 0.6f;  // 7th in bass (3rd inversion)
     
-    // Slash chord (bass not in chord) = lower score
+    if (bassInterval == 2 || bassInterval == 9)  // 9th or 6th
+        return 0.5f;  // Extension in bass
+    
+    // Slash chord (bass not a typical chord tone)
     return 0.3f;
 }
 
@@ -171,11 +184,10 @@ float ConfidenceScorer::calculateComplexityPenalty(
     const ChordHypothesis& hyp
 ) const
 {
-    const ChordFormula& formula = CHORD_FORMULAS[hyp.formulaIndex];
-    
+    // Use hypothesis.complexity directly (set from template in H-WCTM path)
     // Complexity 1 = no penalty, higher = more penalty
     // Scale: complexity 1 = 0.0, complexity 4 = 0.3
-    return (formula.complexity - 1) * 0.1f;
+    return (hyp.complexity - 1) * 0.1f;
 }
 
 float ConfidenceScorer::calculateVelocityWeight(

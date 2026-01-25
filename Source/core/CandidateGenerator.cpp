@@ -19,10 +19,12 @@ void ChordHypothesis::getChordName(char* buffer, int bufferSize) const
     
     const char* rootName = PITCH_CLASS_NAMES[rootPitchClass];
     
-    // Use template name if available (H-WCTM), fallback to formula
+    // Use template name if available (H-WCTM), fallback to formula only if templateName is null
+    // Note: empty templateName ("") means "Major" so output is just root like "C"
     const char* symbol = templateName;
-    if (symbol == nullptr || symbol[0] == '\0')
+    if (symbol == nullptr)
     {
+        // No template name - try legacy formula
         if (formulaIndex >= 0 && formulaIndex < CHORD_FORMULA_COUNT)
         {
             symbol = CHORD_FORMULAS[formulaIndex].symbol;
@@ -137,8 +139,9 @@ int CandidateGenerator::generateCandidatesFromChroma(
     // Test all 12 possible roots
     for (int rootPC = 0; rootPC < 12; ++rootPC)
     {
-        // Transpose chroma so root = bin 0
-        ChromaVector transposed = chroma.shifted(-rootPC);
+        // Transpose chroma so potential root pitch class is at bin 0
+        // This allows direct comparison with templates (which have root at index 0)
+        ChromaVector transposed = chroma.shifted(rootPC);
         const auto& bins = transposed.getBins();
         
         // Check if root is significantly present

@@ -116,10 +116,11 @@ bool ChordResolver::shouldPrefer(
     }
     
     // Rule 2: Prefer simpler quality if scores are close
-    const ChordFormula& formulaA = CHORD_FORMULAS[a.hypothesis.formulaIndex];
-    const ChordFormula& formulaB = CHORD_FORMULAS[b.hypothesis.formulaIndex];
+    // Use hypothesis.complexity directly (set from template in H-WCTM path)
+    int complexityA = a.hypothesis.complexity;
+    int complexityB = b.hypothesis.complexity;
     
-    if (formulaA.complexity < formulaB.complexity && scoreDiff < config_.simplicityMargin)
+    if (complexityA < complexityB && scoreDiff < config_.simplicityMargin)
     {
         return true;
     }
@@ -151,17 +152,17 @@ int ChordResolver::calculateInversionType(const ChordHypothesis& hyp) const
     if (hyp.bassPitchClass == hyp.rootPitchClass)
         return 0;
     
-    const ChordFormula& formula = CHORD_FORMULAS[hyp.formulaIndex];
     int bassInterval = (hyp.bassPitchClass - hyp.rootPitchClass + 12) % 12;
     
-    // Check required intervals for inversions
-    for (int i = 1; i < formula.requiredCount; ++i)  // Start at 1 (skip root)
-    {
-        if (formula.requiredIntervals[i] == bassInterval)
-        {
-            return i;  // 1st, 2nd, 3rd inversion
-        }
-    }
+    // Common inversion intervals:
+    // 1st inversion: bass = 3rd (interval 3 or 4)
+    // 2nd inversion: bass = 5th (interval 7)
+    if (bassInterval == 3 || bassInterval == 4)
+        return 1;  // 1st inversion (bass is 3rd)
+    if (bassInterval == 7)
+        return 2;  // 2nd inversion (bass is 5th)
+    if (bassInterval == 10 || bassInterval == 11)
+        return 3;  // 3rd inversion (bass is 7th)
     
     // Not a standard inversion - slash chord
     return -1;

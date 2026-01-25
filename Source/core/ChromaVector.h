@@ -193,14 +193,18 @@ public:
     
     /**
      * Get a shifted version of this vector (for root transposition)
-     * Shifts so that 'newRoot' becomes index 0
+     * Shifts so that pitch class 'root' becomes index 0
+     * 
+     * Example: If C-E-G is in bins[0,4,7] and root=4 (E),
+     * result will have E at index 0, so intervals are relative to E.
      */
-    ChromaVector shifted(int newRoot) const
+    ChromaVector shifted(int root) const
     {
         ChromaVector result;
         for (int i = 0; i < 12; ++i)
         {
-            int srcIdx = (i + newRoot) % 12;
+            // For interval i relative to root, get the absolute pitch class
+            int srcIdx = (i + root) % 12;
             result.bins_[i] = bins_[srcIdx];
         }
         result.totalEnergy_ = totalEnergy_;
