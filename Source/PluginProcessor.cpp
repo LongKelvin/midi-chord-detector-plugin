@@ -162,9 +162,10 @@ void MidiChordDetectorAudioProcessor::processBlock (juce::AudioBuffer<float>& bu
         processedMidi.addEvent(message, samplePosition);
     }
     
-    // Update chord detection if notes changed OR if we have active notes
-    // (to handle sustain and time window)
-    if (notesChanged || noteState_.getActiveNoteCount() > 0)
+    // Event-driven chord detection:
+    // Only re-evaluate chord when a meaningful MIDI event occurs
+    // (Note On, Note Off, Sustain Pedal, All Notes Off)
+    if (notesChanged)
     {
         updateChordDetection();
     }
