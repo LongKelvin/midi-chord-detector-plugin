@@ -1,0 +1,113 @@
+# ============================================================================
+# MIDI Chord Detector - Git Ignore
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# JUCE Framework (auto-downloaded by build script)
+# ----------------------------------------------------------------------------
+MidiChordDetector/Resources/JUCE/
+MidiChordDetector/Resources/juce-*/
+
+# ----------------------------------------------------------------------------
+# Build Directories & Artifacts
+# ----------------------------------------------------------------------------
+# Root build directory (contains all build artifacts including CMake and JUCE)
+build/
+build/*
+
+Resources/
+Resources/*
+
+# MidiChordDetector build directories
+MidiChordDetector/build/
+MidiChordDetector/build/*
+MidiChordDetector/Builds/
+MidiChordDetector/Builds/*
+
+# All build directories anywhere in the project
+**/build/
+**/build/*
+**/Builds/
+**/Builds/*
+
+# CMake artifacts (in any location)
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+CMakeUserPresets.json
+_deps/
+*-prefix/
+
+# JUCE build artifacts (only in build folders, NOT Resources/JUCE)
+build/JUCE/
+**/build/JUCE/
+
+# ----------------------------------------------------------------------------
+# Compiled Files (C++)
+# ----------------------------------------------------------------------------
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Libraries
+*.so
+*.dylib
+*.dll
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Fortran module files
+*.mod
+*.smod
+
+# ----------------------------------------------------------------------------
+# IDE Files
+# ----------------------------------------------------------------------------
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.ncb
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+
+# VS Code
+.vscode/settings.json
+.vscode/*.log
+
+# ----------------------------------------------------------------------------
+# OS Files
+# ----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----------------------------------------------------------------------------
+# Temporary & Log Files
+# ----------------------------------------------------------------------------
+*.log
+*.tmp
+*.temp
+*~

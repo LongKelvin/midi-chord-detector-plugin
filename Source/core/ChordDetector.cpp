@@ -184,9 +184,9 @@ ChordCandidate ChordDetector::detectChord(
     result.activeNoteCount = static_cast<int8_t>(noteCount);
     result.lowestMidiNote = static_cast<int8_t>(static_cast<uint8_t>(noteBuffer_[0]));
     result.highestMidiNote = static_cast<int8_t>(static_cast<uint8_t>(noteBuffer_[noteCount - 1]));
-    result.bassNoteCount = voices.bassCount;
-    result.chordNoteCount = voices.chordCount;
-    result.melodyNoteCount = voices.melodyCount;
+    result.bassNoteCount = static_cast<int8_t>(voices.bassCount);
+    result.chordNoteCount = static_cast<int8_t>(voices.chordCount);
+    result.melodyNoteCount = static_cast<int8_t>(voices.melodyCount);
     
     return result;
 }
