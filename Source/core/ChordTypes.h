@@ -151,7 +151,9 @@ constexpr int BASS_MAX_NOTE = 52;  // E3 (below this is bass)
 constexpr int MELODY_MIN_NOTE = 72; // C5 (above this is melody)
 
 // Time window for rolled chord detection (milliseconds)
-constexpr double DEFAULT_TIME_WINDOW_MS = 80.0;
+// Short window to catch notes played slightly apart in rolled/arpeggiated chords
+// Event-driven: this only affects detection, not display hold time
+constexpr double DEFAULT_TIME_WINDOW_MS = 150.0;
 constexpr int MAX_TIME_WINDOW_NOTES = 32;
 
 } // namespace ChordDetection
