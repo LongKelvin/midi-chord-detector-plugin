@@ -62,7 +62,7 @@ juce_add_plugin(MidiChordDetector
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
     PRODUCT_NAME "MIDI Chord Detector"
-    VST3_CATEGORIES "Instrument|Tools"
+    VST3_CATEGORIES "Fx"
 )
 
 # Source files
