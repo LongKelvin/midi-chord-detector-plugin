@@ -49,7 +49,9 @@ endif()
 message(STATUS "Using JUCE from: ${JUCE_DIR}")
 add_subdirectory(${JUCE_DIR} JUCE EXCLUDE_FROM_ALL)
 
-# VST3 SDK is included with JUCE
+#===============================================================================
+# VST3 Plugin Target
+#===============================================================================
 juce_add_plugin(MidiChordDetector
     COMPANY_NAME "MusicProgrammings"
     PLUGIN_MANUFACTURER_CODE Mprg
@@ -107,6 +109,63 @@ target_compile_features(MidiChordDetector PRIVATE cxx_std_17)
 
 # Include directories
 target_include_directories(MidiChordDetector
+    PRIVATE
+        Source
+)
+
+#===============================================================================
+# Standalone Application Target (for testing/debugging)
+#===============================================================================
+juce_add_gui_app(MidiChordDetectorStandalone
+    COMPANY_NAME "MusicProgrammings"
+    PRODUCT_NAME "MIDI Chord Detector Standalone"
+    VERSION "2.0.0"
+)
+
+# Standalone source files
+target_sources(MidiChordDetectorStandalone
+    PRIVATE
+        Source/standalone/Main.cpp
+        Source/standalone/MainComponent.cpp
+        # Core engine (shared with plugin)
+        Source/core/MidiNoteState.cpp
+        Source/core/TimeWindowBuffer.cpp
+        Source/core/ChordDetector.cpp
+        Source/core/CandidateGenerator.cpp
+        Source/core/HarmonicMemory.cpp
+        Source/core/ConfidenceScorer.cpp
+        Source/core/ChordResolver.cpp
+        Source/core/ChordDetectorEngine.cpp
+)
+
+# Compile definitions for standalone
+target_compile_definitions(MidiChordDetectorStandalone
+    PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_DISPLAY_SPLASH_SCREEN=0
+        JUCE_REPORT_APP_USAGE=0
+        JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:MidiChordDetectorStandalone,JUCE_PRODUCT_NAME>"
+        JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:MidiChordDetectorStandalone,JUCE_VERSION>"
+)
+
+# Link JUCE modules for standalone
+target_link_libraries(MidiChordDetectorStandalone
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_audio_devices
+        juce::juce_gui_extra
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
+)
+
+# C++17 for standalone
+target_compile_features(MidiChordDetectorStandalone PRIVATE cxx_std_17)
+
+# Include directories for standalone
+target_include_directories(MidiChordDetectorStandalone
     PRIVATE
         Source
 )
