@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "core/ChordCandidate.h"
+#include "core/ChordResolver.h"
 
 /**
  * ChordDisplayComponent - Displays detected chord information
@@ -33,7 +33,7 @@ public:
      * Update the displayed chord
      * Call from UI thread when new chord is available
      */
-    void setChord(const ChordDetection::ChordCandidate& chord);
+    void setChord(const ChordDetection::ResolvedChord& chord);
     
     /**
      * Clear the display (show "N.C.")
@@ -41,7 +41,7 @@ public:
     void clearChord();
 
 private:
-    ChordDetection::ChordCandidate currentChord_;
+    ChordDetection::ResolvedChord currentChord_;
     
     juce::Font chordNameFont_;
     juce::Font detailFont_;

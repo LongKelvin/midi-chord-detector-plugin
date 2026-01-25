@@ -89,7 +89,7 @@ void ChordDisplayComponent::resized()
     // Layout is handled in paint()
 }
 
-void ChordDisplayComponent::setChord(const ChordDetection::ChordCandidate& chord)
+void ChordDisplayComponent::setChord(const ChordDetection::ResolvedChord& chord)
 {
     currentChord_ = chord;
     updateDisplayStrings();
@@ -98,7 +98,7 @@ void ChordDisplayComponent::setChord(const ChordDetection::ChordCandidate& chord
 
 void ChordDisplayComponent::clearChord()
 {
-    currentChord_ = ChordDetection::ChordCandidate();
+    currentChord_ = ChordDetection::ResolvedChord();
     updateDisplayStrings();
     repaint();
 }
@@ -114,7 +114,7 @@ void ChordDisplayComponent::setMidiActivity(bool active)
 
 void ChordDisplayComponent::updateDisplayStrings()
 {
-    if (!currentChord_.isValid)
+    if (!currentChord_.isValid())
     {
         chordNameString_ = "N.C.";
         descriptionString_ = "No Chord";
@@ -123,16 +123,28 @@ void ChordDisplayComponent::updateDisplayStrings()
         return;
     }
     
-    // Chord name
-    char chordNameBuffer[64];
-    currentChord_.getChordName(chordNameBuffer, sizeof(chordNameBuffer));
-    chordNameString_ = juce::String(chordNameBuffer);
+    // Chord name (already built in ResolvedChord)
+    chordNameString_ = juce::String(currentChord_.chordName);
     
     // Description
-    descriptionString_ = juce::String(currentChord_.getChordDescription());
+    descriptionString_ = juce::String(currentChord_.qualityName);
     
     // Inversion
-    inversionString_ = juce::String(currentChord_.getInversionText());
+    if (currentChord_.isSlashChord)
+    {
+        inversionString_ = "Slash Chord";
+    }
+    else
+    {
+        switch (currentChord_.inversionType)
+        {
+            case 0: inversionString_ = "Root Position"; break;
+            case 1: inversionString_ = "1st Inversion"; break;
+            case 2: inversionString_ = "2nd Inversion"; break;
+            case 3: inversionString_ = "3rd Inversion"; break;
+            default: inversionString_ = ""; break;
+        }
+    }
     
     // Confidence
     int confidencePercent = static_cast<int>(currentChord_.confidence * 100.0f);

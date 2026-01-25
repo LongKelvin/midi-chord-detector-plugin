@@ -73,6 +73,11 @@ target_sources(MidiChordDetector
         Source/core/MidiNoteState.cpp
         Source/core/TimeWindowBuffer.cpp
         Source/core/ChordDetector.cpp
+        Source/core/CandidateGenerator.cpp
+        Source/core/HarmonicMemory.cpp
+        Source/core/ConfidenceScorer.cpp
+        Source/core/ChordResolver.cpp
+        Source/core/ChordDetectorEngine.cpp
         Source/ui/ChordDisplayComponent.cpp
 )
 

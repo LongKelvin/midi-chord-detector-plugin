@@ -1,38 +1,90 @@
 # MIDI Chord Detector
 
-A real-time MIDI chord detection VST3 plugin that displays the currently playing chord on-screen. Designed for live performance, practice, and composition.
+A real-time MIDI chord detection VST3 plugin with **advanced harmonic recognition** and **temporal reasoning**. Designed for jazz, live performance, practice, and composition.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![VST3](https://img.shields.io/badge/VST3-Instrument-green)
 
 ## Overview
 
-MIDI Chord Detector analyzes MIDI input in real-time and displays the detected chord name. It's implemented as a **VST3 Instrument** to ensure compatibility with Cubase AI/Elements and other DAWs that don't support MIDI FX plugins.
+MIDI Chord Detector v2.0 uses a sophisticated **layered architecture** that treats chords as hypotheses evolving over time, not instant detections. The key principle: *"A wrong chord briefly is worse than a delayed correct chord."*
+
+The plugin analyzes MIDI input using temporal reasoning with a sliding memory window, multi-factor confidence scoring, and intelligent resolution rules to produce stable, musically-sensible chord names.
 
 **Note:** This is a **VST3 Instrument**, not a MIDI FX plugin. The MIDI FX version is available in other branches.
 
 ## Features
 
-- **Real-time chord detection** - Displays chords as you play
+### Core Capabilities
+- **Advanced harmonic recognition** - Jazz-capable detection with 24 chord types
+- **Temporal reasoning** - 200ms sliding memory window with exponential decay
+- **Multi-factor confidence scoring** - Weighted analysis of intervals, bass, stability, and complexity
+- **Hysteresis protection** - Prevents rapid flickering between similar chords
+- **Real-time safe** - No heap allocations in audio thread, fixed-size buffers
+
+### Technical Features
 - **Event-driven architecture** - Responds instantly to MIDI events (Note On/Off, Sustain Pedal)
 - **Sustain pedal support** - Respects CC64 for natural playing
-- **Rolled chord detection** - Captures arpeggiated chords played within 150ms
+- **Rolled chord detection** - Captures arpeggiated chords via temporal memory
 - **Voice separation** - Intelligently separates bass, chord tones, and melody
 - **Clean UI** - Minimal, distraction-free chord display
 - **MIDI pass-through** - Forwards all MIDI to downstream instruments
 - **Zero latency** - No audio processing, pure MIDI analysis
 
-### Supported Chord Types
+### Supported Chord Types (24 Total)
 
-The detector recognizes common chord types including:
-- Major, Minor, Diminished, Augmented
-- Dominant 7th, Major 7th, Minor 7th
-- Extended chords (9th, 11th, 13th)
-- Suspended chords (sus2, sus4)
-- Various alterations and jazz voicings
+**Tier 1 - MVP Jazz Chords (~80% of real jazz harmony):**
+- Major, Minor, Dominant 7th, Minor 7th, Major 7th
+- Minor 7♭5 (Half-diminished), Diminished 7th
 
-**Note:** The chord detection algorithm works well with basic chords but may not be perfect for complex jazz voicings or unusual chord structures. It's designed for common chord progressions in pop, rock, and basic jazz contexts.
+**Tier 2 - Extended Support:**
+- Diminished, Augmented, Augmented 7th
+- Minor/Major 7th, Dominant 7sus4
+- 6th chords (Major 6, Minor 6)
+- 9th chords (Dominant 9, Major 9, Minor 9)
+- Suspended (sus2, sus4, 7sus4)
+- Added tone chords (add9)
+- Alterations (7♯5, 7♭9)
+
+## Architecture
+
+```
+┌─────────────────┐
+│  MidiNoteState  │  Active notes with timestamps
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│CandidateGenerator│  Enumerate all chord hypotheses
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ HarmonicMemory  │  Temporal reasoning with decay
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ConfidenceScorer │  Multi-factor scoring
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  ChordResolver  │  Final selection with rules
+└─────────────────┘
+```
+
+### Confidence Scoring Weights
+
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Temporal Stability | 0.30 | How consistently the chord appears across memory frames |
+| Interval Coverage | 0.25 | How well notes match required chord intervals |
+| Missing Core Tones | 0.20 | Penalty for missing root, 3rd, or 7th |
+| Bass Alignment | 0.15 | Bonus when bass note matches chord root |
+| Complexity Penalty | 0.05 | Prefer simpler chords (Occam's razor) |
+| Velocity Weight | 0.05 | Louder notes contribute more |
 
 ## Usage in DAW
 
@@ -127,39 +179,61 @@ DAWs that should theoretically work:
 
 The plugin uses the following default settings:
 
+### Engine Parameters
 - **Minimum notes for chord:** 2
-- **Time window for rolled chords:** 150ms
-- **Voice separation:**
-  - Bass: below E3 (MIDI note 52)
-  - Melody: above C5 (MIDI note 72)
-  - Chord tones: E3 to C5
+- **Memory window:** 200ms (temporal reasoning)
+- **Decay half-life:** 100ms (exponential weighting)
+- **Minimum confidence:** 0.45 (detection threshold)
+
+### Voice Separation
+- **Bass:** below E3 (MIDI note 52)
+- **Melody:** above C5 (MIDI note 72)
+- **Chord tones:** E3 to C5
 
 These settings are optimized for typical keyboard playing and cannot currently be changed (may be configurable in future versions).
 
 ## How It Works
 
-The plugin uses a sophisticated chord detection algorithm:
+The plugin uses a **layered detection pipeline** with temporal reasoning:
 
-1. **Event-Driven Detection** - Chord analysis triggers only on MIDI events (Note On/Off, Sustain Pedal), not on timers
-2. **Note State Tracking** - Maintains accurate state of held notes and sustain pedal
-3. **Voice Separation** - Separates bass, chord tones, and melody notes
-4. **Pitch Class Analysis** - Converts notes to pitch classes (0-11) for root-independent analysis
-5. **Pattern Matching** - Tests all 12 possible roots against all chord type definitions
-6. **Weighted Scoring** - Scores candidates based on interval importance and completeness
-7. **Best Match Selection** - Selects the highest-scoring chord that meets minimum threshold
+### 1. Note State Tracking
+- Tracks all active notes with timestamps
+- Respects sustain pedal (CC64)
+- Builds pitch class set for analysis
 
-The algorithm prioritizes:
-- Common chord types over exotic ones
-- Root position over inversions (but detects and displays both)
-- Complete chord intervals over partial matches
+### 2. Candidate Generation
+- Tests each note as potential root
+- Evaluates against 24 chord formula definitions
+- Calculates formula match scores using interval importance weights
+
+### 3. Harmonic Memory
+- Maintains sliding 200ms window of recent frames
+- Applies exponential decay (older = less weight)
+- Reinforces consistently appearing candidates
+- Enables temporal stability calculation
+
+### 4. Confidence Scoring
+Multi-factor weighted scoring:
+- **Temporal stability (30%)** - Consistency across memory frames
+- **Interval coverage (25%)** - How well notes match chord intervals
+- **Missing core tones (20%)** - Penalty for absent root/3rd/7th
+- **Bass alignment (15%)** - Bonus when bass = root
+- **Complexity penalty (5%)** - Prefer simpler chords
+- **Velocity weighting (5%)** - Louder notes matter more
+
+### 5. Resolution
+- Applies hysteresis (prefer current chord if close)
+- Requires confidence delta > 0.05 to switch
+- Outputs stable, musically-sensible results
 
 ## Known Limitations
 
-- **Chord detection is not perfect** - Works well for common chords (major, minor, 7ths, etc.) but may misidentify complex jazz chords or polychords
+- **Jazz detection is Tier 1** - Handles ~80% of real jazz harmony; complex voicings/polychords may misidentify
 - **Only tested with Cubase** - May have issues with other DAWs
 - **Windows only** - No macOS build currently available
 - **No user settings** - Configuration is hard-coded
 - **Basic UI** - Minimal display, no customization options
+- **Latency** - ~10-50ms detection delay for temporal stability (intentional design choice)
 
 ## Troubleshooting
 
@@ -206,12 +280,12 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 Contributions are welcome! Areas that need improvement:
 
-- chord detection algorithm accuracy
-- macOS support
-- User-configurable settings
-- Additional chord types
-- Testing with other DAWs
-- UI improvements
+- **Tier 2+ chord formulas** - Add 11th, 13th, altered extensions
+- **Scoring weight tuning** - Optimize weights based on real-world testing
+- **macOS support** - Cross-platform build
+- **User-configurable settings** - Expose engine parameters in UI
+- **Testing with other DAWs** - Verify compatibility
+- **UI improvements** - Visual feedback for confidence, chord history
 
 ## Author
 
@@ -221,8 +295,9 @@ GitHub: [https://github.com/LongKelvin](https://github.com/LongKelvin)
 ## Acknowledgments
 
 - Built with [JUCE Framework](https://juce.com/)
-- Chord detection algorithm based on weighted pitch class analysis
-- Inspired by the need for real-time chord feedback in Cubase AI/Elements
+- Layered detection architecture with temporal reasoning
+- Chord formula system based on music theory interval analysis
+- Inspired by the need for jazz-capable chord feedback in Cubase AI/Elements
 
 ---
 

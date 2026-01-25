@@ -11,9 +11,10 @@ MidiNoteState::MidiNoteState()
     activeNotes_.reset();
     sustainedNotesPendingRelease_.reset();
     velocities_.fill(0.0f);
+    noteOnTimes_.fill(0.0);
 }
 
-void MidiNoteState::noteOn(int noteNumber, float velocity)
+void MidiNoteState::noteOn(int noteNumber, float velocity, double currentTimeMs)
 {
     if (noteNumber < 0 || noteNumber >= 128)
         return;
@@ -25,6 +26,7 @@ void MidiNoteState::noteOn(int noteNumber, float velocity)
     }
     
     velocities_[noteNumber] = velocity;
+    noteOnTimes_[noteNumber] = currentTimeMs;
     
     // If this note was pending release from sustain, remove it from that set
     sustainedNotesPendingRelease_[noteNumber] = false;
@@ -52,6 +54,7 @@ void MidiNoteState::noteOff(int noteNumber)
             --activeNoteCount_;
         }
         velocities_[noteNumber] = 0.0f;
+        noteOnTimes_[noteNumber] = 0.0;
         sustainedNotesPendingRelease_[noteNumber] = false;
     }
 }
@@ -61,6 +64,7 @@ void MidiNoteState::allNotesOff()
     activeNotes_.reset();
     sustainedNotesPendingRelease_.reset();
     velocities_.fill(0.0f);
+    noteOnTimes_.fill(0.0);
     activeNoteCount_ = 0;
 }
 
@@ -89,11 +93,40 @@ int MidiNoteState::getActiveNotes(int* outNotes, int maxNotes) const
     return count;
 }
 
+int MidiNoteState::getActiveNotesDetailed(ActiveNote* outNotes, int maxNotes) const
+{
+    int count = 0;
+    for (int i = 0; i < 128 && count < maxNotes; ++i)
+    {
+        if (activeNotes_[i])
+        {
+            outNotes[count] = ActiveNote(i, velocities_[i], noteOnTimes_[i]);
+            ++count;
+        }
+    }
+    return count;
+}
+
 float MidiNoteState::getNoteVelocity(int noteNumber) const
 {
     if (noteNumber < 0 || noteNumber >= 128)
         return 0.0f;
     return velocities_[noteNumber];
+}
+
+double MidiNoteState::getNoteOnTime(int noteNumber) const
+{
+    if (noteNumber < 0 || noteNumber >= 128)
+        return 0.0;
+    return noteOnTimes_[noteNumber];
+}
+
+ActiveNote MidiNoteState::getNoteInfo(int noteNumber) const
+{
+    if (noteNumber < 0 || noteNumber >= 128 || !activeNotes_[noteNumber])
+        return ActiveNote();
+    
+    return ActiveNote(noteNumber, velocities_[noteNumber], noteOnTimes_[noteNumber]);
 }
 
 void MidiNoteState::setSustainPedal(bool isPressed)
@@ -125,9 +158,43 @@ void MidiNoteState::processSustainRelease()
                 --activeNoteCount_;
             }
             velocities_[i] = 0.0f;
+            noteOnTimes_[i] = 0.0;
             sustainedNotesPendingRelease_[i] = false;
         }
     }
+}
+
+std::bitset<12> MidiNoteState::getPitchClassSet() const
+{
+    std::bitset<12> pcs;
+    for (int i = 0; i < 128; ++i)
+    {
+        if (activeNotes_[i])
+        {
+            pcs[i % 12] = true;
+        }
+    }
+    return pcs;
+}
+
+int MidiNoteState::getLowestNote() const
+{
+    for (int i = 0; i < 128; ++i)
+    {
+        if (activeNotes_[i])
+            return i;
+    }
+    return -1;
+}
+
+int MidiNoteState::getHighestNote() const
+{
+    for (int i = 127; i >= 0; --i)
+    {
+        if (activeNotes_[i])
+            return i;
+    }
+    return -1;
 }
 
 } // namespace ChordDetection
