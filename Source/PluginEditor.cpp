@@ -32,7 +32,8 @@ void MidiChordDetectorAudioProcessorEditor::paint (juce::Graphics& g)
     
     // Title text
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(16.0f, juce::Font::bold));
+    auto titleFont = juce::Font(juce::FontOptions().withHeight(16.0f)).boldened();
+    g.setFont(titleFont);
     g.drawText("MIDI Chord Detector", 10, 10, getWidth() - 20, 20,
                juce::Justification::centredLeft);
 }

@@ -3,8 +3,9 @@
 ChordDisplayComponent::ChordDisplayComponent()
     : midiActivity_(false)
 {
-    chordNameFont_ = juce::Font(48.0f, juce::Font::bold);
-    detailFont_ = juce::Font(14.0f);
+    chordNameFont_ = juce::FontOptions().withHeight(48.0f);
+    chordNameFont_ = chordNameFont_.boldened();
+    detailFont_ = juce::FontOptions().withHeight(14.0f);
     
     chordNameString_ = "N.C.";
     descriptionString_ = "No Chord";

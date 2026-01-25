@@ -21,6 +21,7 @@ void ChordDetector::noteOn(int midiNote, double currentTimeMs)
 
 void ChordDetector::noteOff(int midiNote, double currentTimeMs)
 {
+    (void)currentTimeMs; // Unused parameter
     timeWindow_.removeNote(midiNote);
 }
 
@@ -57,14 +58,14 @@ ChordCandidate ChordDetector::detectChord(
             currentTimeMs,
             timeWindow_.getWindowSize(),
             noteBuffer_.data(),
-            noteBuffer_.size()
+            static_cast<int>(noteBuffer_.size())
         );
     }
     else
     {
         noteCount = noteState.getActiveNotes(
             noteBuffer_.data(),
-            noteBuffer_.size()
+            static_cast<int>(noteBuffer_.size())
         );
     }
     
@@ -181,8 +182,8 @@ ChordCandidate ChordDetector::detectChord(
     
     // Fill in note count info
     result.activeNoteCount = static_cast<int8_t>(noteCount);
-    result.lowestMidiNote = static_cast<int8_t>(noteBuffer_[0]);
-    result.highestMidiNote = static_cast<int8_t>(noteBuffer_[noteCount - 1]);
+    result.lowestMidiNote = static_cast<int8_t>(static_cast<uint8_t>(noteBuffer_[0]));
+    result.highestMidiNote = static_cast<int8_t>(static_cast<uint8_t>(noteBuffer_[noteCount - 1]));
     result.bassNoteCount = voices.bassCount;
     result.chordNoteCount = voices.chordCount;
     result.melodyNoteCount = voices.melodyCount;
