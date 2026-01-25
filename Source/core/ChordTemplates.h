@@ -75,17 +75,17 @@ constexpr ChordTemplate CHORD_TEMPLATES[] = {
     // Major 7: C-E-G-B
     {"maj7", "Major 7th",
      {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.0f, 1.0f},
-     2, 1.1f, false},
+     2, 1.2f, false},
     
     // Major 7 Shell: E-B (3rd + 7th, no root) - very common jazz voicing
     {"maj7", "Major 7th",
      {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f},
-     2, 1.15f, true},
+     2, 1.25f, true},
     
     // Major 9: C-E-G-B-D
     {"maj9", "Major 9th",
-     {1.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.0f, 1.0f},
-     3, 1.2f, false},
+     {1.0f, 0.0f, 0.8f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.0f, 1.0f},
+     2, 1.35f, false},
     
     // Major 6: C-E-G-A
     {"6", "Major 6th",
@@ -112,64 +112,64 @@ constexpr ChordTemplate CHORD_TEMPLATES[] = {
     // Minor 7: C-Eb-G-Bb
     {"m7", "Minor 7th",
      {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.1f, false},
+     2, 1.2f, false},
     
     // Minor 7 Shell: Eb-Bb (m3 + b7, no root) - common jazz voicing
     {"m7", "Minor 7th",
      {0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.15f, true},
+     2, 1.25f, true},
     
     // Minor 9: C-Eb-G-Bb-D
     {"m9", "Minor 9th",
-     {1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
-     3, 1.2f, false},
+     {1.0f, 0.0f, 0.8f, 1.0f, 0.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.35f, false},
     
     // Minor 11: C-Eb-G-Bb-D-F
     {"m11", "Minor 11th",
-     {1.0f, 0.0f, 0.4f, 1.0f, 0.0f, 0.5f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
-     4, 1.25f, false},
+     {1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.8f, 0.0f, 0.1f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.4f, false},
     
     // Minor 6: C-Eb-G-A
     {"m6", "Minor 6th",
      {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.7f, 0.0f, 0.0f},
      2, 0.95f, false},
     
-    // Minor/Major 7: C-Eb-G-B (minor with major 7th)
+    // Minor/Major 7: C-Eb-G-B (minor with major 7th) - jazz/film-noir chord
     {"mMaj7", "Minor/Major 7th",
      {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.0f, 1.0f},
-     3, 0.9f, false},
+     2, 1.3f, false},
     
     // ========== DOMINANT FAMILY ==========
     
     // Dominant 7: C-E-G-Bb
     {"7", "Dominant 7th",
      {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.1f, false},
+     2, 1.2f, false},
     
     // Dominant 7 Shell: E-Bb (M3 + b7) - the tritone! Most important jazz shell
     {"7", "Dominant 7th",
      {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.2f, true},  // Higher priority - tritone is definitive
+     2, 1.3f, true},  // Higher priority - tritone is definitive
     
     // Dominant 9: C-E-G-Bb-D
     {"9", "Dominant 9th",
-     {1.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
-     3, 1.15f, false},
+     {1.0f, 0.0f, 0.8f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.35f, false},
     
-    // Dominant 13: C-E-G-Bb-D-(F)-A
+    // Dominant 13: C-E-Bb-A (5th and 9th often omitted in jazz)
     {"13", "Dominant 13th",
-     {1.0f, 0.0f, 0.4f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.6f, 1.0f, 0.0f},
-     4, 1.2f, false},
+     {1.0f, 0.0f, 0.3f, 0.0f, 1.0f, 0.0f, 0.0f, 0.1f, 0.0f, 0.9f, 1.0f, 0.0f},
+     2, 1.4f, false},
     
     // 7sus4: C-F-G-Bb
     {"7sus4", "Dominant 7th Sus4",
      {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.0f, false},
+     2, 1.25f, false},
     
     // 7#9 (Hendrix chord): C-E-G-Bb-D# (has both M3 and #9/m3)
     {"7#9", "Dominant 7th #9",
-     {1.0f, 0.0f, 0.0f, 0.6f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
-     3, 1.1f, false},
+     {1.0f, 0.0f, 0.0f, 0.9f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.3f, false},
     
     // 7b9: C-E-G-Bb-Db
     {"7b9", "Dominant 7th b9",
@@ -193,15 +193,15 @@ constexpr ChordTemplate CHORD_TEMPLATES[] = {
     
     // ========== DIMINISHED FAMILY ==========
     
-    // Diminished Triad: C-Eb-Gb
+    // Diminished Triad: C-Eb-Gb (tritone defines the chord)
     {"dim", "Diminished",
-     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-     2, 0.9f, false},
+     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
+     1, 1.1f, false},
     
-    // Diminished 7: C-Eb-Gb-Bbb (A)
+    // Diminished 7: C-Eb-Gb-Bbb (A) - symmetrical chord
     {"dim7", "Diminished 7th",
-     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f},
-     3, 1.0f, false},
+     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.2f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f},
+     2, 1.25f, false},
     
     // Half-Diminished (m7b5): C-Eb-Gb-Bb
     {"m7b5", "Half Diminished",
@@ -215,10 +215,10 @@ constexpr ChordTemplate CHORD_TEMPLATES[] = {
     
     // ========== AUGMENTED FAMILY ==========
     
-    // Augmented Triad: C-E-G#
+    // Augmented Triad: C-E-G# (#5 defines the chord)
     {"aug", "Augmented",
-     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f},
-     2, 0.85f, false},
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.2f, 0.0f, 0.0f, 0.0f},
+     1, 1.1f, false},
     
     // Augmented Major 7: C-E-G#-B
     {"augMaj7", "Augmented Major 7th",

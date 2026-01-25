@@ -181,29 +181,55 @@ int CandidateGenerator::generateCandidatesFromChroma(
                 int bassRelative = (bassPitchClass - rootPC + 12) % 12;
                 if (bassRelative == 0)
                 {
-                    // Bass is root - strong bonus
-                    adjustedScore *= 1.15f;
+                    // Bass is root - small bonus (prioritize similarity over bass)
+                    adjustedScore *= 1.02f;
                 }
                 else if (bassRelative == 7)
                 {
-                    // Bass is 5th - small bonus (common inversion)
-                    adjustedScore *= 1.02f;
+                    // Bass is 5th - neutral (2nd inversion)
+                    adjustedScore *= 1.0f;
                 }
                 else if (bassRelative == 4 || bassRelative == 3)
                 {
-                    // Bass is 3rd (major or minor) - acceptable for inversions
-                    adjustedScore *= 0.95f;
+                    // Bass is 3rd (major or minor) - neutral (1st inversion is valid)
+                    adjustedScore *= 1.0f;
+                }
+                else if (bassRelative == 10)
+                {
+                    // Bass is b7 - acceptable for dominant family
+                    adjustedScore *= 0.98f;
                 }
                 else
                 {
                     // Bass is unusual - could be slash chord or mismatch
-                    adjustedScore *= 0.85f;
+                    adjustedScore *= 0.90f;
                 }
             }
             
             // Apply template complexity penalty (prefer simpler interpretations)
-            float complexityPenalty = (tpl.complexity - 1) * 0.015f;
+            // Reduced penalty when template's extension tones are present
+            float complexityPenalty = (tpl.complexity - 1) * 0.01f;
             adjustedScore -= complexityPenalty;
+            
+            // Extension bonus: reward templates whose extension bins match the input
+            // Extensions/tensions: b9(1), 9(2), #9(3), 11(5), #11/b5(6), #5/b13(8), 13(9), b7(10), M7(11)
+            float extensionBonus = 0.0f;
+            constexpr int extensionBins[] = {1, 2, 3, 5, 6, 8, 9, 10, 11};  // All extensions and 7ths
+            for (int eb : extensionBins)
+            {
+                // If template expects this extension AND input has it
+                if (tpl.bins[eb] > 0.1f && bins[eb] > 0.1f)
+                {
+                    extensionBonus += 0.06f;  // Bonus per matched extension
+                }
+            }
+            adjustedScore += extensionBonus;
+            
+            // Apply template priority as additive bonus (scaled to be meaningful)
+            // Power chord (0.7) should get significant penalty: (0.7-1.0)*0.15 = -0.045
+            // 7th chords (1.1) should get small bonus: (1.1-1.0)*0.15 = +0.015
+            float priorityBonus = (tpl.priority - 1.0f) * 0.15f;
+            adjustedScore += priorityBonus;
             
             // Shell voicing slight penalty vs full voicing (all else equal)
             if (tpl.isShell)

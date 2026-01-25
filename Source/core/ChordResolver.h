@@ -78,7 +78,7 @@ struct ResolutionConfig
     ResolutionConfig()
         : minimumConfidence(0.45f)
         , stabilityMargin(0.1f)
-        , simplicityMargin(0.05f)
+        , simplicityMargin(0.01f)  // Reduced from 0.05 - only prefer simpler when VERY close
         , allowSlashChords(true)
         , minimumStableFrames(2)
     {}

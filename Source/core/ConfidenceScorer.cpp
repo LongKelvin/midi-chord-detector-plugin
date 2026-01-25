@@ -71,6 +71,15 @@ ScoredCandidate ConfidenceScorer::scoreCandidate(
     score -= result.complexityPenaltyScore * weights_.complexityPenalty;
     score += result.velocityWeightScore * weights_.velocityWeight;
     
+    // Include baseScore from CandidateGenerator (has extension bonus and priority)
+    // baseScore typically ranges 0.8-1.2, normalize to add as bonus
+    if (hyp.baseScore > 0.0f)
+    {
+        // Add as small differentiating factor
+        float baseBonus = (hyp.baseScore - 0.9f) * 0.3f;  // e.g., 1.1 → +0.06
+        score += baseBonus;
+    }
+    
     // Clamp to [0, 1]
     result.confidence = std::max(0.0f, std::min(1.0f, score));
     
@@ -131,9 +140,9 @@ float ConfidenceScorer::calculateBassAlignment(
 ) const
 {
     if (bassPitchClass < 0)
-        return 0.5f;  // No bass info - neutral
+        return 0.8f;  // No bass info - neutral
     
-    // Root position = highest score
+    // Root position = highest score (but don't over-penalize inversions)
     if (hyp.bassPitchClass == hyp.rootPitchClass)
         return 1.0f;
     
@@ -144,16 +153,16 @@ float ConfidenceScorer::calculateBassAlignment(
     // 3 = minor 3rd, 4 = major 3rd, 7 = perfect 5th
     // 10 = minor 7th, 11 = major 7th
     if (bassInterval == 3 || bassInterval == 4 || bassInterval == 7)
-        return 0.7f;  // Standard inversion (3rd or 5th in bass)
+        return 0.95f;  // Standard inversion (3rd or 5th in bass) - almost as good as root
     
     if (bassInterval == 10 || bassInterval == 11)
-        return 0.6f;  // 7th in bass (3rd inversion)
+        return 0.85f;  // 7th in bass (3rd inversion)
     
     if (bassInterval == 2 || bassInterval == 9)  // 9th or 6th
-        return 0.5f;  // Extension in bass
+        return 0.75f;  // Extension in bass
     
     // Slash chord (bass not a typical chord tone)
-    return 0.3f;
+    return 0.5f;
 }
 
 float ConfidenceScorer::calculateTemporalStability(
