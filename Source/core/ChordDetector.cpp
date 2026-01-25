@@ -21,6 +21,9 @@ void ChordDetector::noteOn(int midiNote, double currentTimeMs)
 
 void ChordDetector::noteOff(int midiNote, double currentTimeMs)
 {
+    (void)currentTimeMs;
+    // Remove note from time window immediately on note-off
+    // This is event-driven: chord state follows actual note state
     timeWindow_.removeNote(midiNote);
 }
 
@@ -48,27 +51,51 @@ ChordCandidate ChordDetector::detectChord(
 {
     ChordCandidate result;
     
-    // Get active notes (either from state or time window)
+    // MidiNoteState is the source of truth - it tracks:
+    // - Notes currently held down
+    // - Notes sustained by pedal (CC64)
+    // - Proper note-on/note-off state
+    int activeNoteCount = noteState.getActiveNoteCount();
+    
+    // No active notes = no chord (event-driven: chord clears immediately)
+    if (activeNoteCount < minNotes)
+    {
+        return result; // isValid = false
+    }
+    
+    // Get notes for analysis
     int noteCount = 0;
     
     if (useTimeWindow)
     {
+        // Time window helps capture rolled/arpeggiated chords
+        // But only use it when there are actually active notes
         noteCount = timeWindow_.getNotesInWindow(
             currentTimeMs,
             timeWindow_.getWindowSize(),
             noteBuffer_.data(),
-            noteBuffer_.size()
+            static_cast<int>(noteBuffer_.size())
         );
+        
+        // Fall back to direct note state if time window is empty
+        if (noteCount < minNotes)
+        {
+            noteCount = noteState.getActiveNotes(
+                noteBuffer_.data(),
+                static_cast<int>(noteBuffer_.size())
+            );
+        }
     }
     else
     {
+        // Use direct note state
         noteCount = noteState.getActiveNotes(
             noteBuffer_.data(),
-            noteBuffer_.size()
+            static_cast<int>(noteBuffer_.size())
         );
     }
     
-    // Need minimum notes for a chord
+    // Still need minimum notes
     if (noteCount < minNotes)
     {
         return result; // isValid = false
@@ -158,7 +185,8 @@ ChordCandidate ChordDetector::detectChord(
     // Check if best match meets minimum threshold
     if (bestScore < minimumScore_ || bestChordIndex < 0)
     {
-        return result;
+        // No valid chord pattern detected from active notes
+        return result; // isValid = false
     }
     
     // Build result
@@ -181,11 +209,11 @@ ChordCandidate ChordDetector::detectChord(
     
     // Fill in note count info
     result.activeNoteCount = static_cast<int8_t>(noteCount);
-    result.lowestMidiNote = static_cast<int8_t>(noteBuffer_[0]);
-    result.highestMidiNote = static_cast<int8_t>(noteBuffer_[noteCount - 1]);
-    result.bassNoteCount = voices.bassCount;
-    result.chordNoteCount = voices.chordCount;
-    result.melodyNoteCount = voices.melodyCount;
+    result.lowestMidiNote = static_cast<int8_t>(static_cast<uint8_t>(noteBuffer_[0]));
+    result.highestMidiNote = static_cast<int8_t>(static_cast<uint8_t>(noteBuffer_[noteCount - 1]));
+    result.bassNoteCount = static_cast<int8_t>(voices.bassCount);
+    result.chordNoteCount = static_cast<int8_t>(voices.chordCount);
+    result.melodyNoteCount = static_cast<int8_t>(voices.melodyCount);
     
     return result;
 }
