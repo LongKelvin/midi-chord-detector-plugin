@@ -1,0 +1,265 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "H-WCTM Chord Detection Test Suite"
+  },
+  "chords": [
+    {
+      "category": "Basic Triads",
+      "tests": [
+        {
+          "name": "C Major",
+          "notes": ["C4", "E4", "G4"],
+          "expected": "C",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "C Minor",
+          "notes": ["C4", "Eb4", "G4"],
+          "expected": "Cm",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "C Diminished",
+          "notes": ["C4", "Eb4", "Gb4"],
+          "expected": "Cdim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Augmented",
+          "notes": ["C4", "E4", "G#4"],
+          "expected": "Caug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Sus2",
+          "notes": ["C4", "D4", "G4"],
+          "expected": "Csus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Sus4",
+          "notes": ["C4", "F4", "G4"],
+          "expected": "Csus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "G Major",
+          "notes": ["G3", "B3", "D4"],
+          "expected": "G",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F Minor",
+          "notes": ["F3", "Ab3", "C4"],
+          "expected": "Fm",
+          "minConfidence": 0.6
+        }
+      ]
+    },
+    {
+      "category": "Essential 7th Chords",
+      "tests": [
+        {
+          "name": "C Major 7",
+          "notes": ["C4", "E4", "G4", "B4"],
+          "expected": "Cmaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "C Dominant 7",
+          "notes": ["C4", "E4", "G4", "Bb4"],
+          "expected": "C7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "C Minor 7",
+          "notes": ["C4", "Eb4", "G4", "Bb4"],
+          "expected": "Cm7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "C Minor/Major 7",
+          "notes": ["C4", "Eb4", "G4", "B4"],
+          "expected": "CmMaj7",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Half-Diminished",
+          "notes": ["C4", "Eb4", "Gb4", "Bb4"],
+          "expected": "Cm7b5",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Diminished 7",
+          "notes": ["C4", "Eb4", "Gb4", "A4"],
+          "expected": "Cdim7",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "D Minor 7",
+          "notes": ["D3", "F3", "A3", "C4"],
+          "expected": "Dm7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "G Dominant 7",
+          "notes": ["G3", "B3", "D4", "F4"],
+          "expected": "G7",
+          "minConfidence": 0.6
+        }
+      ]
+    },
+    {
+      "category": "Extended Chords",
+      "tests": [
+        {
+          "name": "C Major 9",
+          "notes": ["C3", "E4", "G4", "B4", "D5"],
+          "expected": "Cmaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Dominant 9",
+          "notes": ["C3", "E4", "G4", "Bb4", "D5"],
+          "expected": "C9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Minor 9",
+          "notes": ["C3", "Eb4", "G4", "Bb4", "D5"],
+          "expected": "Cm9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Minor 11",
+          "notes": ["C3", "Eb4", "Bb4", "D5", "F5"],
+          "expected": "Cm11",
+          "minConfidence": 0.4
+        },
+        {
+          "name": "C Dominant 13",
+          "notes": ["C3", "E4", "Bb4", "D5", "A5"],
+          "expected": "C13",
+          "minConfidence": 0.4
+        },
+        {
+          "name": "C Major 6",
+          "notes": ["C4", "E4", "G4", "A4"],
+          "expected": "C6",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Major 6/9",
+          "notes": ["C3", "E4", "G4", "A4", "D5"],
+          "expected": "C6/9",
+          "minConfidence": 0.4
+        }
+      ]
+    },
+    {
+      "category": "Altered Dominants",
+      "tests": [
+        {
+          "name": "C7 flat 9",
+          "notes": ["C3", "E4", "G4", "Bb4", "Db5"],
+          "expected": "C7b9",
+          "minConfidence": 0.4
+        },
+        {
+          "name": "C7 sharp 9 (Hendrix)",
+          "notes": ["C3", "E4", "G4", "Bb4", "D#5"],
+          "expected": "C7#9",
+          "minConfidence": 0.4
+        },
+        {
+          "name": "C7 flat 5",
+          "notes": ["C3", "E4", "Gb4", "Bb4"],
+          "expected": "C7b5",
+          "minConfidence": 0.4
+        },
+        {
+          "name": "C7 sharp 5",
+          "notes": ["C3", "E4", "G#4", "Bb4"],
+          "expected": "C7#5",
+          "minConfidence": 0.4
+        },
+        {
+          "name": "C7 sus4",
+          "notes": ["C3", "F4", "G4", "Bb4"],
+          "expected": "C7sus4",
+          "minConfidence": 0.5
+        }
+      ]
+    },
+    {
+      "category": "Practical/Funk Voicings",
+      "tests": [
+        {
+          "name": "C Minor 6",
+          "notes": ["C4", "Eb4", "G4", "A4"],
+          "expected": "Cm6",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Add9",
+          "notes": ["C4", "E4", "G4", "D5"],
+          "expected": "Cadd9",
+          "minConfidence": 0.5
+        }
+      ]
+    },
+    {
+      "category": "Inversions",
+      "tests": [
+        {
+          "name": "C Major 1st Inversion",
+          "notes": ["E3", "G3", "C4"],
+          "expected": "C/E",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Major 2nd Inversion",
+          "notes": ["G3", "C4", "E4"],
+          "expected": "C/G",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Minor 1st Inversion",
+          "notes": ["Eb3", "G3", "C4"],
+          "expected": "Cm/Eb",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Dm7 1st Inversion",
+          "notes": ["F3", "A3", "C4", "D4"],
+          "expected": "Dm7/F",
+          "minConfidence": 0.5
+        }
+      ]
+    },
+    {
+      "category": "Different Octaves",
+      "tests": [
+        {
+          "name": "C Major Wide Voicing",
+          "notes": ["C3", "G3", "E4"],
+          "expected": "C",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Major Low Register",
+          "notes": ["C2", "E2", "G2"],
+          "expected": "C",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C Major High Register",
+          "notes": ["C5", "E5", "G5"],
+          "expected": "C",
+          "minConfidence": 0.5
+        }
+      ]
+    }
+  ]
+}
