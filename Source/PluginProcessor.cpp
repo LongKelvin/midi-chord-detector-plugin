@@ -3,16 +3,10 @@
 
 //==============================================================================
 MidiChordDetectorAudioProcessor::MidiChordDetectorAudioProcessor()
-#ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
+                       // VST3 Instrument requires audio output bus (outputs silence)
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
                        )
-#endif
     , sampleRate_(44100.0)
     , currentTimeMs_(0.0)
     , passMidiThrough_(true)
@@ -122,29 +116,13 @@ void MidiChordDetectorAudioProcessor::releaseResources()
     chordDetector_.reset();
 }
 
-#ifndef JucePlugin_PreferredChannelConfigurations
 bool MidiChordDetectorAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
-    return true;
-  #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-        return false;
-
-   #if ! JucePlugin_IsSynth
-    // Check input/output match for non-synth plugins
-    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
-        return false;
-   #endif
-
-    return true;
-  #endif
+    // VST3 Instrument: Accept mono or stereo output (we output silence anyway)
+    const auto& mainOutput = layouts.getMainOutputChannelSet();
+    return mainOutput == juce::AudioChannelSet::mono()
+        || mainOutput == juce::AudioChannelSet::stereo();
 }
-#endif
 
 void MidiChordDetectorAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                                      juce::MidiBuffer& midiMessages)
