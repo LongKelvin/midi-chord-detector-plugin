@@ -1,7 +1,10 @@
 #include "CandidateGenerator.h"
+#include "ChromaVector.h"
+#include "ChordTemplates.h"
 #include <cstring>
 #include <cstdio>
 #include <cmath>
+#include <algorithm>
 
 namespace ChordDetection
 {
@@ -14,32 +17,266 @@ void ChordHypothesis::getChordName(char* buffer, int bufferSize) const
         return;
     }
     
-    const ChordFormula& formula = CHORD_FORMULAS[formulaIndex];
     const char* rootName = PITCH_CLASS_NAMES[rootPitchClass];
+    
+    // Use template name if available (H-WCTM), fallback to formula
+    const char* symbol = templateName;
+    if (symbol == nullptr || symbol[0] == '\0')
+    {
+        if (formulaIndex >= 0 && formulaIndex < CHORD_FORMULA_COUNT)
+        {
+            symbol = CHORD_FORMULAS[formulaIndex].symbol;
+        }
+        else
+        {
+            symbol = "";
+        }
+    }
     
     if (bassPitchClass == rootPitchClass || bassPitchClass < 0)
     {
         // Root position
-        snprintf(buffer, bufferSize, "%s%s", rootName, formula.symbol);
+        snprintf(buffer, bufferSize, "%s%s", rootName, symbol);
     }
     else
     {
         // Slash chord
         const char* bassName = PITCH_CLASS_NAMES[bassPitchClass];
-        snprintf(buffer, bufferSize, "%s%s/%s", rootName, formula.symbol, bassName);
+        snprintf(buffer, bufferSize, "%s%s/%s", rootName, symbol, bassName);
     }
 }
 
 // ============================================================================
-// CandidateGenerator Implementation
+// CandidateGenerator Implementation - H-WCTM Algorithm
 // ============================================================================
 
 CandidateGenerator::CandidateGenerator()
     : minimumNoteCount_(2)
-    , minimumBaseScore_(0.5f)
+    , minimumBaseScore_(0.4f)  // Lower threshold for cosine similarity
 {
 }
 
+/**
+ * Build a ChromaVector from the current MidiNoteState
+ * Applies bass boost, register weighting, and velocity scaling
+ */
+ChromaVector CandidateGenerator::buildChromaVector(
+    const MidiNoteState& noteState,
+    double currentTimeMs
+) const
+{
+    ChromaVector chroma;
+    
+    // Get lowest note for bass boost determination
+    int lowestNote = noteState.getLowestNote();
+    
+    // Add all active notes with appropriate weighting
+    for (int midiNote = 0; midiNote < 128; ++midiNote)
+    {
+        float velocity = noteState.getNoteVelocity(midiNote);
+        if (velocity <= 0.0f)
+            continue;
+        
+        bool isBass = (lowestNote >= 0 && midiNote == lowestNote);
+        bool isSustained = noteState.isNoteSustained(midiNote);
+        
+        // Get note onset time for decay calculation
+        double onsetTime = noteState.getNoteOnsetTime(midiNote);
+        double age = isSustained ? (currentTimeMs - onsetTime) : 0.0;
+        
+        chroma.addNote(midiNote, velocity, isBass, DEFAULT_CHROMA_WEIGHTS, age);
+    }
+    
+    return chroma;
+}
+
+/**
+ * Generate candidates using H-WCTM: Hybrid Weighted Chroma-Template Matching
+ */
+int CandidateGenerator::generateCandidatesFromNoteState(
+    const MidiNoteState& noteState,
+    double currentTimeMs,
+    ChordHypothesis* outCandidates
+) const
+{
+    int noteCount = noteState.getActiveNoteCount();
+    if (noteCount < minimumNoteCount_)
+        return 0;
+    
+    // Build weighted chroma vector
+    ChromaVector chroma = buildChromaVector(noteState, currentTimeMs);
+    
+    // Get bass pitch class
+    int lowestNote = noteState.getLowestNote();
+    int bassPitchClass = (lowestNote >= 0) ? (lowestNote % 12) : -1;
+    
+    return generateCandidatesFromChroma(chroma, bassPitchClass, currentTimeMs, outCandidates);
+}
+
+/**
+ * Core H-WCTM matching: test all root transpositions against all templates
+ */
+int CandidateGenerator::generateCandidatesFromChroma(
+    const ChromaVector& chroma,
+    int bassPitchClass,
+    double currentTimeMs,
+    ChordHypothesis* outCandidates
+) const
+{
+    int candidateCount = 0;
+    
+    // Temporary array for sorting
+    struct ScoredCandidate {
+        ChordHypothesis hyp;
+        float sortScore;
+    };
+    
+    static ScoredCandidate tempCandidates[12 * CHORD_TEMPLATE_COUNT];
+    int tempCount = 0;
+    
+    // Test all 12 possible roots
+    for (int rootPC = 0; rootPC < 12; ++rootPC)
+    {
+        // Transpose chroma so root = bin 0
+        ChromaVector transposed = chroma.shifted(-rootPC);
+        const auto& bins = transposed.getBins();
+        
+        // Check if root is significantly present
+        bool rootPresent = bins[0] > 0.1f;
+        float rootWeight = bins[0];
+        
+        // Test against all chord templates
+        for (int tIdx = 0; tIdx < CHORD_TEMPLATE_COUNT; ++tIdx)
+        {
+            const ChordTemplate& tpl = CHORD_TEMPLATES[tIdx];
+            
+            // Calculate cosine similarity
+            float similarity = transposed.cosineSimilarityWithTemplate(tpl.bins.data());
+            
+            // Apply root presence modifier
+            float adjustedScore = similarity;
+            
+            if (tpl.isShell)
+            {
+                // Shell voicings don't require root
+                // But if root IS present, slight bonus
+                if (rootPresent)
+                    adjustedScore *= 1.05f;
+            }
+            else
+            {
+                // Full voicings prefer root
+                if (rootPresent)
+                    adjustedScore *= 1.1f;
+                else
+                    adjustedScore *= 0.7f;  // Significant penalty without root
+            }
+            
+            // Bass note alignment bonus
+            if (bassPitchClass >= 0)
+            {
+                int bassRelative = (bassPitchClass - rootPC + 12) % 12;
+                if (bassRelative == 0)
+                {
+                    // Bass is root - strong bonus
+                    adjustedScore *= 1.15f;
+                }
+                else if (bassRelative == 7)
+                {
+                    // Bass is 5th - small bonus (common inversion)
+                    adjustedScore *= 1.02f;
+                }
+                else if (bassRelative == 4 || bassRelative == 3)
+                {
+                    // Bass is 3rd (major or minor) - acceptable for inversions
+                    adjustedScore *= 0.95f;
+                }
+                else
+                {
+                    // Bass is unusual - could be slash chord or mismatch
+                    adjustedScore *= 0.85f;
+                }
+            }
+            
+            // Apply template complexity penalty (prefer simpler interpretations)
+            float complexityPenalty = (tpl.complexity - 1) * 0.015f;
+            adjustedScore -= complexityPenalty;
+            
+            // Shell voicing slight penalty vs full voicing (all else equal)
+            if (tpl.isShell)
+                adjustedScore *= 0.95f;
+            
+            // Only add if above threshold
+            if (adjustedScore >= minimumBaseScore_)
+            {
+                ChordHypothesis hyp;
+                hyp.rootPitchClass = rootPC;
+                hyp.bassPitchClass = bassPitchClass;
+                hyp.formulaIndex = tIdx;  // Use template index as formula index
+                hyp.templateName = tpl.name;
+                hyp.templateFullName = tpl.fullName;
+                hyp.cosineSimilarity = similarity;
+                hyp.isShellVoicing = tpl.isShell;
+                hyp.complexity = tpl.complexity;
+                hyp.baseScore = adjustedScore;
+                hyp.timestamp = currentTimeMs;
+                
+                // Legacy compatibility fields
+                hyp.requiredMatched = 0;
+                hyp.requiredTotal = 0;
+                hyp.optionalMatched = 0;
+                hyp.extraNotes = 0;
+                hyp.hasForbiddenInterval = false;
+                
+                if (tempCount < 12 * CHORD_TEMPLATE_COUNT)
+                {
+                    tempCandidates[tempCount].hyp = hyp;
+                    tempCandidates[tempCount].sortScore = adjustedScore;
+                    ++tempCount;
+                }
+            }
+        }
+    }
+    
+    // Sort by score descending
+    std::sort(tempCandidates, tempCandidates + tempCount,
+        [](const ScoredCandidate& a, const ScoredCandidate& b) {
+            return a.sortScore > b.sortScore;
+        });
+    
+    // Copy top candidates, removing near-duplicates
+    for (int i = 0; i < tempCount && candidateCount < MAX_CANDIDATES_PER_FRAME; ++i)
+    {
+        bool isDuplicate = false;
+        
+        // Check if we already have a very similar candidate
+        for (int j = 0; j < candidateCount; ++j)
+        {
+            if (tempCandidates[i].hyp.rootPitchClass == outCandidates[j].rootPitchClass)
+            {
+                // Same root - check if it's essentially the same chord type
+                float scoreDiff = std::abs(tempCandidates[i].sortScore - outCandidates[j].baseScore);
+                if (scoreDiff < 0.05f)
+                {
+                    // Very similar score, probably redundant
+                    isDuplicate = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!isDuplicate)
+        {
+            outCandidates[candidateCount++] = tempCandidates[i].hyp;
+        }
+    }
+    
+    return candidateCount;
+}
+
+/**
+ * Legacy interface using bitset - converts to ChromaVector
+ */
 int CandidateGenerator::generateCandidates(
     const std::bitset<12>& pitchClasses,
     int bassPitchClass,
@@ -47,85 +284,25 @@ int CandidateGenerator::generateCandidates(
     ChordHypothesis* outCandidates
 ) const
 {
-    int candidateCount = 0;
-    int noteCount = static_cast<int>(pitchClasses.count());
-    
-    // Must have minimum notes
-    if (noteCount < minimumNoteCount_)
-        return 0;
-    
-    // Test all 12 possible roots
-    for (int rootPC = 0; rootPC < 12; ++rootPC)
+    // Convert bitset to simple chroma vector (equal weights)
+    ChromaVector chroma;
+    for (int pc = 0; pc < 12; ++pc)
     {
-        // Skip if root pitch class is not present (except for rootless voicings)
-        // For now, prefer root in the voicing
-        bool rootPresent = pitchClasses[rootPC];
-        
-        // Normalize pitch classes relative to this root
-        std::bitset<12> relativePCs;
-        for (int pc = 0; pc < 12; ++pc)
+        if (pitchClasses[pc])
         {
-            if (pitchClasses[pc])
-            {
-                int relativePC = (pc - rootPC + 12) % 12;
-                relativePCs[relativePC] = true;
-            }
-        }
-        
-        // Test against all chord formulas
-        for (int fIdx = 0; fIdx < CHORD_FORMULA_COUNT; ++fIdx)
-        {
-            const ChordFormula& formula = CHORD_FORMULAS[fIdx];
-            
-            ChordHypothesis hyp;
-            hyp.rootPitchClass = rootPC;
-            hyp.bassPitchClass = bassPitchClass;
-            hyp.formulaIndex = fIdx;
-            hyp.timestamp = currentTimeMs;
-            
-            float score = scoreFormula(relativePCs, formula, hyp);
-            
-            // Apply root presence bonus
-            if (rootPresent)
-                score *= 1.1f;
-            else
-                score *= 0.85f;  // Rootless voicing penalty
-            
-            // Apply formula's base priority
-            score *= formula.basePriority;
-            
-            hyp.baseScore = score;
-            
-            // Only include if meets threshold and not forbidden
-            if (score >= minimumBaseScore_ && !hyp.hasForbiddenInterval)
-            {
-                if (candidateCount < MAX_CANDIDATES_PER_FRAME)
-                {
-                    outCandidates[candidateCount++] = hyp;
-                }
-            }
+            // Use middle register, moderate velocity
+            int midiNote = 60 + pc;  // C4-B4
+            bool isBass = (pc == bassPitchClass);
+            chroma.addNote(midiNote, 0.7f, isBass, DEFAULT_CHROMA_WEIGHTS, 0.0);
         }
     }
     
-    return candidateCount;
+    return generateCandidatesFromChroma(chroma, bassPitchClass, currentTimeMs, outCandidates);
 }
 
-int CandidateGenerator::generateCandidatesFromNoteState(
-    const MidiNoteState& noteState,
-    double currentTimeMs,
-    ChordHypothesis* outCandidates
-) const
-{
-    // Get pitch class set
-    std::bitset<12> pitchClasses = noteState.getPitchClassSet();
-    
-    // Get bass pitch class
-    int lowestNote = noteState.getLowestNote();
-    int bassPitchClass = (lowestNote >= 0) ? (lowestNote % 12) : -1;
-    
-    return generateCandidates(pitchClasses, bassPitchClass, currentTimeMs, outCandidates);
-}
-
+/**
+ * Legacy formula scoring - kept for compatibility but not primary path
+ */
 float CandidateGenerator::scoreFormula(
     const std::bitset<12>& relativePCs,
     const ChordFormula& formula,
@@ -190,7 +367,7 @@ float CandidateGenerator::scoreFormula(
         
         if (relativePCs[interval])
         {
-            optionalScore += INTERVAL_IMPORTANCE[interval] * 0.3f;  // Extensions worth less
+            optionalScore += INTERVAL_IMPORTANCE[interval] * 0.3f;
             ++optionalPresent;
         }
     }
@@ -237,11 +414,11 @@ float CandidateGenerator::scoreFormula(
     
     hyp.extraNotes = extraCount;
     
-    // Extra note penalty (light - allows extensions not explicitly listed)
+    // Extra note penalty
     float penalty = static_cast<float>(extraCount) * 0.08f;
     baseScore = std::max(baseScore - penalty, 0.0f);
     
-    // Complexity penalty (prefer simpler chords when ambiguous)
+    // Complexity penalty
     float complexityPenalty = (formula.complexity - 1) * 0.02f;
     baseScore -= complexityPenalty;
     

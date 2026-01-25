@@ -146,6 +146,14 @@ bool MidiNoteState::isSustainPedalPressed() const
     return sustainPedalPressed_;
 }
 
+bool MidiNoteState::isNoteSustained(int noteNumber) const
+{
+    if (noteNumber < 0 || noteNumber >= 128)
+        return false;
+    // Note is sustained if it's active but marked for pending release
+    return activeNotes_[noteNumber] && sustainedNotesPendingRelease_[noteNumber];
+}
+
 void MidiNoteState::processSustainRelease()
 {
     for (int i = 0; i < 128; ++i)

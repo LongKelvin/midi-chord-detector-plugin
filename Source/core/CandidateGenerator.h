@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ChordFormula.h"
+#include "ChordTemplates.h"
+#include "ChromaVector.h"
 #include "MidiNoteState.h"
 #include <array>
 #include <bitset>
@@ -14,12 +16,21 @@ namespace ChordDetection
  * 
  * As per spec: "This layer does not decide – it enumerates possibilities."
  * Each hypothesis represents one possible chord interpretation from the played notes.
+ * 
+ * Updated for H-WCTM: Now uses cosine similarity with weighted templates.
  */
 struct ChordHypothesis
 {
     int rootPitchClass;             // 0-11 (C=0, C#=1, etc.)
     int bassPitchClass;             // Actual bass note (for slash chords)
-    int formulaIndex;               // Index into CHORD_FORMULAS array
+    int formulaIndex;               // Index into CHORD_TEMPLATES array
+    
+    // Template info (H-WCTM)
+    const char* templateName;       // "maj7", "m7", etc.
+    const char* templateFullName;   // "Major 7th", etc.
+    float cosineSimilarity;         // Raw cosine similarity score
+    bool isShellVoicing;            // Is this from a shell template?
+    int complexity;                 // Template complexity level
     
     // Matching information
     int requiredMatched;            // Count of required intervals matched
@@ -38,6 +49,11 @@ struct ChordHypothesis
         : rootPitchClass(-1)
         , bassPitchClass(-1)
         , formulaIndex(-1)
+        , templateName("")
+        , templateFullName("")
+        , cosineSimilarity(0.0f)
+        , isShellVoicing(false)
+        , complexity(1)
         , requiredMatched(0)
         , requiredTotal(0)
         , optionalMatched(0)
@@ -49,7 +65,7 @@ struct ChordHypothesis
     
     bool isValid() const
     {
-        return rootPitchClass >= 0 && formulaIndex >= 0 && !hasForbiddenInterval;
+        return rootPitchClass >= 0 && formulaIndex >= 0 && !hasForbiddenInterval && baseScore > 0.0f;
     }
     
     /**
@@ -129,7 +145,27 @@ private:
     float minimumBaseScore_;
     
     /**
-     * Score a single chord formula against played pitch classes
+     * Build weighted ChromaVector from MidiNoteState
+     * Applies bass boost, register weighting, velocity scaling, and sustain decay
+     */
+    ChromaVector buildChromaVector(
+        const MidiNoteState& noteState,
+        double currentTimeMs
+    ) const;
+    
+    /**
+     * Core H-WCTM matching using ChromaVector and templates
+     * Tests all root transpositions against all templates using cosine similarity
+     */
+    int generateCandidatesFromChroma(
+        const ChromaVector& chroma,
+        int bassPitchClass,
+        double currentTimeMs,
+        ChordHypothesis* outCandidates
+    ) const;
+    
+    /**
+     * Score a single chord formula against played pitch classes (legacy)
      * 
      * @param relativePCs Pitch classes relative to tested root
      * @param formula Chord formula to test

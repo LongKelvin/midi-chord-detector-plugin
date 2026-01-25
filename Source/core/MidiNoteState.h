@@ -94,6 +94,18 @@ public:
     bool isSustainPedalPressed() const;
     
     /**
+     * Check if a specific note is being held by sustain pedal
+     * (i.e., key released but still sounding due to sustain)
+     */
+    bool isNoteSustained(int noteNumber) const;
+    
+    /**
+     * Get note-on timestamp (0.0 if not active)
+     * Alias for getNoteOnTime for consistency
+     */
+    double getNoteOnsetTime(int noteNumber) const { return getNoteOnTime(noteNumber); }
+    
+    /**
      * Called when sustain pedal is released
      * Removes all notes that were released while sustain was on
      */
