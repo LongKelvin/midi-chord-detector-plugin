@@ -46,9 +46,10 @@ MainComponent::MainComponent()
     
     midiDeviceSelector.onChange = [this] {
         int selectedIndex = midiDeviceSelector.getSelectedItemIndex();
-        if (selectedIndex >= 0 && selectedIndex < midiDevices.size())
+        // Account for the "-- Select MIDI Device --" placeholder at index 0
+        if (selectedIndex > 0 && selectedIndex <= midiDevices.size())
         {
-            openMidiDevice (selectedIndex);
+            openMidiDevice (selectedIndex - 1); // Adjust for placeholder offset
         }
         else
         {
@@ -332,8 +333,8 @@ void MainComponent::refreshMidiDevices()
 {
     int previousSelection = midiDeviceSelector.getSelectedItemIndex();
     juce::String previousDeviceName;
-    if (previousSelection >= 0 && previousSelection < midiDeviceNames.size())
-        previousDeviceName = midiDeviceNames[previousSelection];
+    if (previousSelection > 0 && previousSelection <= midiDeviceNames.size())
+        previousDeviceName = midiDeviceNames[previousSelection - 1];
     
     midiDeviceSelector.clear();
     midiDeviceNames.clear();
@@ -363,6 +364,7 @@ void MainComponent::refreshMidiDevices()
         
         if (newSelectionIndex >= 0)
         {
+            // Re-select previously selected device (add 1 for placeholder offset)
             midiDeviceSelector.setSelectedItemIndex (newSelectionIndex + 1, juce::sendNotification);
         }
         else
