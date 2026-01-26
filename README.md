@@ -70,7 +70,7 @@ DAWs that should theoretically work:
 
 ### From Release Package
 
-1. Download the latest release package from the [Releases](../../releases) page
+1. Download the latest release package from the [Releases](https://github.com/LongKelvin/midi-chord-detector-plugin/releases) page
 2. **Close your DAW completely**
 3. Extract `MIDI Chord Detector.vst3` folder to your VST3 directory:
    ```
@@ -93,8 +93,8 @@ DAWs that should theoretically work:
 
 1. **Clone the repository**
    ```powershell
-   git clone https://github.com/YOUR_USERNAME/midi-fx-chord-detector.git
-   cd midi-fx-chord-detector/MidiChordDetector
+   git clone https://github.com/LongKelvin/midi-chord-detector-plugin.git
+   cd midi-chord-detector-plugin
    ```
 
 2. **Run the build script**
