@@ -1,11 +1,12 @@
 {
   "metadata": {
-    "version": "1.0",
-    "description": "H-WCTM Chord Detection Test Suite"
+    "version": "2.0",
+    "description": "H-WCTM Expanded Chord Detection Test Suite - Chromatic Coverage",
+    "generatedDate": "2026-01-27"
   },
   "chords": [
     {
-      "category": "Basic Triads",
+      "category": "Major Chords",
       "tests": [
         {
           "name": "C Major",
@@ -14,11 +15,177 @@
           "minConfidence": 0.6
         },
         {
+          "name": "C# Major",
+          "notes": ["C#4", "E#4", "G#4"],
+          "expected": "C#",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Db Major",
+          "notes": ["Db4", "F4", "Ab4"],
+          "expected": "Db",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "D Major",
+          "notes": ["D4", "F#4", "A4"],
+          "expected": "D",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Eb Major",
+          "notes": ["Eb4", "G4", "Bb4"],
+          "expected": "Eb",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "E Major",
+          "notes": ["E4", "G#4", "B4"],
+          "expected": "E",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F Major",
+          "notes": ["F4", "A4", "C5"],
+          "expected": "F",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F# Major",
+          "notes": ["F#4", "A#4", "C#5"],
+          "expected": "F#",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Gb Major",
+          "notes": ["Gb4", "Bb4", "Db5"],
+          "expected": "Gb",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "G Major",
+          "notes": ["G4", "B4", "D5"],
+          "expected": "G",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Ab Major",
+          "notes": ["Ab4", "C5", "Eb5"],
+          "expected": "Ab",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "A Major",
+          "notes": ["A4", "C#5", "E5"],
+          "expected": "A",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Bb Major",
+          "notes": ["Bb4", "D5", "F5"],
+          "expected": "Bb",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "B Major",
+          "notes": ["B4", "D#5", "F#5"],
+          "expected": "B",
+          "minConfidence": 0.6
+        }
+      ]
+    },
+    {
+      "category": "Minor Chords",
+      "tests": [
+        {
           "name": "C Minor",
           "notes": ["C4", "Eb4", "G4"],
           "expected": "Cm",
           "minConfidence": 0.6
         },
+        {
+          "name": "C# Minor",
+          "notes": ["C#4", "E4", "G#4"],
+          "expected": "C#m",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Db Minor",
+          "notes": ["Db4", "E4", "Ab4"],
+          "expected": "Dbm",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "D Minor",
+          "notes": ["D4", "F4", "A4"],
+          "expected": "Dm",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Eb Minor",
+          "notes": ["Eb4", "Gb4", "Bb4"],
+          "expected": "Ebm",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "E Minor",
+          "notes": ["E4", "G4", "B4"],
+          "expected": "Em",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F Minor",
+          "notes": ["F4", "Ab4", "C5"],
+          "expected": "Fm",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F# Minor",
+          "notes": ["F#4", "A4", "C#5"],
+          "expected": "F#m",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Gb Minor",
+          "notes": ["Gb4", "A4", "Db5"],
+          "expected": "Gbm",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "G Minor",
+          "notes": ["G4", "Bb4", "D5"],
+          "expected": "Gm",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Ab Minor",
+          "notes": ["Ab4", "B4", "Eb5"],
+          "expected": "Abm",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "A Minor",
+          "notes": ["A4", "C5", "E5"],
+          "expected": "Am",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Bb Minor",
+          "notes": ["Bb4", "Db5", "F5"],
+          "expected": "Bbm",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "B Minor",
+          "notes": ["B4", "D5", "F#5"],
+          "expected": "Bm",
+          "minConfidence": 0.6
+        }
+      ]
+    },
+    {
+      "category": "Diminished Chords",
+      "tests": [
         {
           "name": "C Diminished",
           "notes": ["C4", "Eb4", "Gb4"],
@@ -26,11 +193,177 @@
           "minConfidence": 0.5
         },
         {
+          "name": "C# Diminished",
+          "notes": ["C#4", "E4", "G4"],
+          "expected": "C#dim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Db Diminished",
+          "notes": ["Db4", "E4", "G4"],
+          "expected": "Dbdim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "D Diminished",
+          "notes": ["D4", "F4", "Ab4"],
+          "expected": "Ddim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Eb Diminished",
+          "notes": ["Eb4", "Gb4", "A4"],
+          "expected": "Ebdim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "E Diminished",
+          "notes": ["E4", "G4", "Bb4"],
+          "expected": "Edim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F Diminished",
+          "notes": ["F4", "Ab4", "B4"],
+          "expected": "Fdim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F# Diminished",
+          "notes": ["F#4", "A4", "C5"],
+          "expected": "F#dim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Gb Diminished",
+          "notes": ["Gb4", "A4", "C5"],
+          "expected": "Gbdim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "G Diminished",
+          "notes": ["G4", "Bb4", "Db5"],
+          "expected": "Gdim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Ab Diminished",
+          "notes": ["Ab4", "B4", "D5"],
+          "expected": "Abdim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "A Diminished",
+          "notes": ["A4", "C5", "Eb5"],
+          "expected": "Adim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Bb Diminished",
+          "notes": ["Bb4", "Db5", "E5"],
+          "expected": "Bbdim",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "B Diminished",
+          "notes": ["B4", "D5", "F5"],
+          "expected": "Bdim",
+          "minConfidence": 0.5
+        }
+      ]
+    },
+    {
+      "category": "Augmented Chords",
+      "tests": [
+        {
           "name": "C Augmented",
           "notes": ["C4", "E4", "G#4"],
           "expected": "Caug",
           "minConfidence": 0.5
         },
+        {
+          "name": "C# Augmented",
+          "notes": ["C#4", "E#4", "A4"],
+          "expected": "C#aug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Db Augmented",
+          "notes": ["Db4", "F4", "A4"],
+          "expected": "Dbaug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "D Augmented",
+          "notes": ["D4", "F#4", "A#4"],
+          "expected": "Daug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Eb Augmented",
+          "notes": ["Eb4", "G4", "B4"],
+          "expected": "Ebaug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "E Augmented",
+          "notes": ["E4", "G#4", "B#4"],
+          "expected": "Eaug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F Augmented",
+          "notes": ["F4", "A4", "C#5"],
+          "expected": "Faug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F# Augmented",
+          "notes": ["F#4", "A#4", "D5"],
+          "expected": "F#aug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Gb Augmented",
+          "notes": ["Gb4", "Bb4", "D5"],
+          "expected": "Gbaug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "G Augmented",
+          "notes": ["G4", "B4", "D#5"],
+          "expected": "Gaug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Ab Augmented",
+          "notes": ["Ab4", "C5", "E5"],
+          "expected": "Abaug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "A Augmented",
+          "notes": ["A4", "C#5", "E#5"],
+          "expected": "Aaug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Bb Augmented",
+          "notes": ["Bb4", "D5", "F#5"],
+          "expected": "Bbaug",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "B Augmented",
+          "notes": ["B4", "D#5", "G5"],
+          "expected": "Baug",
+          "minConfidence": 0.5
+        }
+      ]
+    },
+    {
+      "category": "Suspended 2nd Chords",
+      "tests": [
         {
           "name": "C Sus2",
           "notes": ["C4", "D4", "G4"],
@@ -38,27 +371,176 @@
           "minConfidence": 0.5
         },
         {
+          "name": "C# Sus2",
+          "notes": ["C#4", "D#4", "G#4"],
+          "expected": "C#sus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Db Sus2",
+          "notes": ["Db4", "Eb4", "Ab4"],
+          "expected": "Dbsus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "D Sus2",
+          "notes": ["D4", "E4", "A4"],
+          "expected": "Dsus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Eb Sus2",
+          "notes": ["Eb4", "F4", "Bb4"],
+          "expected": "Ebsus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "E Sus2",
+          "notes": ["E4", "F#4", "B4"],
+          "expected": "Esus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F Sus2",
+          "notes": ["F4", "G4", "C5"],
+          "expected": "Fsus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F# Sus2",
+          "notes": ["F#4", "G#4", "C#5"],
+          "expected": "F#sus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Gb Sus2",
+          "notes": ["Gb4", "Ab4", "Db5"],
+          "expected": "Gbsus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "G Sus2",
+          "notes": ["G4", "A4", "D5"],
+          "expected": "Gsus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Ab Sus2",
+          "notes": ["Ab4", "Bb4", "Eb5"],
+          "expected": "Absus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "A Sus2",
+          "notes": ["A4", "B4", "E5"],
+          "expected": "Asus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Bb Sus2",
+          "notes": ["Bb4", "C5", "F5"],
+          "expected": "Bbsus2",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "B Sus2",
+          "notes": ["B4", "C#5", "F#5"],
+          "expected": "Bsus2",
+          "minConfidence": 0.5
+        }
+      ]
+    },
+    {
+      "category": "Suspended 4th Chords",
+      "tests": [
+        {
           "name": "C Sus4",
           "notes": ["C4", "F4", "G4"],
           "expected": "Csus4",
           "minConfidence": 0.5
         },
         {
-          "name": "G Major",
-          "notes": ["G3", "B3", "D4"],
-          "expected": "G",
-          "minConfidence": 0.6
+          "name": "C# Sus4",
+          "notes": ["C#4", "F#4", "G#4"],
+          "expected": "C#sus4",
+          "minConfidence": 0.5
         },
         {
-          "name": "F Minor",
-          "notes": ["F3", "Ab3", "C4"],
-          "expected": "Fm",
-          "minConfidence": 0.6
+          "name": "Db Sus4",
+          "notes": ["Db4", "Gb4", "Ab4"],
+          "expected": "Dbsus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "D Sus4",
+          "notes": ["D4", "G4", "A4"],
+          "expected": "Dsus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Eb Sus4",
+          "notes": ["Eb4", "Ab4", "Bb4"],
+          "expected": "Ebsus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "E Sus4",
+          "notes": ["E4", "A4", "B4"],
+          "expected": "Esus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F Sus4",
+          "notes": ["F4", "Bb4", "C5"],
+          "expected": "Fsus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F# Sus4",
+          "notes": ["F#4", "B4", "C#5"],
+          "expected": "F#sus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Gb Sus4",
+          "notes": ["Gb4", "B4", "Db5"],
+          "expected": "Gbsus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "G Sus4",
+          "notes": ["G4", "C5", "D5"],
+          "expected": "Gsus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Ab Sus4",
+          "notes": ["Ab4", "Db5", "Eb5"],
+          "expected": "Absus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "A Sus4",
+          "notes": ["A4", "D5", "E5"],
+          "expected": "Asus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Bb Sus4",
+          "notes": ["Bb4", "Eb5", "F5"],
+          "expected": "Bbsus4",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "B Sus4",
+          "notes": ["B4", "E5", "F#5"],
+          "expected": "Bsus4",
+          "minConfidence": 0.5
         }
       ]
     },
     {
-      "category": "Essential 7th Chords",
+      "category": "Major Seventh Chords",
       "tests": [
         {
           "name": "C Major 7",
@@ -67,11 +549,88 @@
           "minConfidence": 0.6
         },
         {
-          "name": "C Dominant 7",
-          "notes": ["C4", "E4", "G4", "Bb4"],
-          "expected": "C7",
+          "name": "C# Major 7",
+          "notes": ["C#4", "E#4", "G#4", "B#4"],
+          "expected": "C#maj7",
           "minConfidence": 0.6
         },
+        {
+          "name": "Db Major 7",
+          "notes": ["Db4", "F4", "Ab4", "C5"],
+          "expected": "Dbmaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "D Major 7",
+          "notes": ["D4", "F#4", "A4", "C#5"],
+          "expected": "Dmaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Eb Major 7",
+          "notes": ["Eb4", "G4", "Bb4", "D5"],
+          "expected": "Ebmaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "E Major 7",
+          "notes": ["E4", "G#4", "B4", "D#5"],
+          "expected": "Emaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F Major 7",
+          "notes": ["F4", "A4", "C5", "E5"],
+          "expected": "Fmaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F# Major 7",
+          "notes": ["F#4", "A#4", "C#5", "E#5"],
+          "expected": "F#maj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Gb Major 7",
+          "notes": ["Gb4", "Bb4", "Db5", "F5"],
+          "expected": "Gbmaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "G Major 7",
+          "notes": ["G4", "B4", "D5", "F#5"],
+          "expected": "Gmaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Ab Major 7",
+          "notes": ["Ab4", "C5", "Eb5", "G5"],
+          "expected": "Abmaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "A Major 7",
+          "notes": ["A4", "C#5", "E5", "G#5"],
+          "expected": "Amaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Bb Major 7",
+          "notes": ["Bb4", "D5", "F5", "A5"],
+          "expected": "Bbmaj7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "B Major 7",
+          "notes": ["B4", "D#5", "F#5", "A#5"],
+          "expected": "Bmaj7",
+          "minConfidence": 0.6
+        }
+      ]
+    },
+    {
+      "category": "Minor Seventh Chords",
+      "tests": [
         {
           "name": "C Minor 7",
           "notes": ["C4", "Eb4", "G4", "Bb4"],
@@ -79,39 +638,265 @@
           "minConfidence": 0.6
         },
         {
-          "name": "C Minor/Major 7",
-          "notes": ["C4", "Eb4", "G4", "B4"],
-          "expected": "CmMaj7",
-          "minConfidence": 0.5
+          "name": "C# Minor 7",
+          "notes": ["C#4", "E4", "G#4", "B4"],
+          "expected": "C#m7",
+          "minConfidence": 0.6
         },
         {
-          "name": "C Half-Diminished",
-          "notes": ["C4", "Eb4", "Gb4", "Bb4"],
-          "expected": "Cm7b5",
-          "minConfidence": 0.5
-        },
-        {
-          "name": "C Diminished 7",
-          "notes": ["C4", "Eb4", "Gb4", "A4"],
-          "expected": "Cdim7",
-          "minConfidence": 0.5
+          "name": "Db Minor 7",
+          "notes": ["Db4", "E4", "Ab4", "B4"],
+          "expected": "Dbm7",
+          "minConfidence": 0.6
         },
         {
           "name": "D Minor 7",
-          "notes": ["D3", "F3", "A3", "C4"],
+          "notes": ["D4", "F4", "A4", "C5"],
           "expected": "Dm7",
           "minConfidence": 0.6
         },
         {
-          "name": "G Dominant 7",
-          "notes": ["G3", "B3", "D4", "F4"],
-          "expected": "G7",
+          "name": "Eb Minor 7",
+          "notes": ["Eb4", "Gb4", "Bb4", "Db5"],
+          "expected": "Ebm7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "E Minor 7",
+          "notes": ["E4", "G4", "B4", "D5"],
+          "expected": "Em7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F Minor 7",
+          "notes": ["F4", "Ab4", "C5", "Eb5"],
+          "expected": "Fm7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F# Minor 7",
+          "notes": ["F#4", "A4", "C#5", "E5"],
+          "expected": "F#m7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Gb Minor 7",
+          "notes": ["Gb4", "A4", "Db5", "E5"],
+          "expected": "Gbm7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "G Minor 7",
+          "notes": ["G4", "Bb4", "D5", "F5"],
+          "expected": "Gm7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Ab Minor 7",
+          "notes": ["Ab4", "B4", "Eb5", "Gb5"],
+          "expected": "Abm7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "A Minor 7",
+          "notes": ["A4", "C5", "E5", "G5"],
+          "expected": "Am7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Bb Minor 7",
+          "notes": ["Bb4", "Db5", "F5", "Ab5"],
+          "expected": "Bbm7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "B Minor 7",
+          "notes": ["B4", "D5", "F#5", "A5"],
+          "expected": "Bm7",
           "minConfidence": 0.6
         }
       ]
     },
     {
-      "category": "Extended Chords",
+      "category": "Dominant Seventh Chords",
+      "tests": [
+        {
+          "name": "C Dominant 7",
+          "notes": ["C4", "E4", "G4", "Bb4"],
+          "expected": "C7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "C# Dominant 7",
+          "notes": ["C#4", "E#4", "G#4", "B4"],
+          "expected": "C#7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Db Dominant 7",
+          "notes": ["Db4", "F4", "Ab4", "B4"],
+          "expected": "Db7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "D Dominant 7",
+          "notes": ["D4", "F#4", "A4", "C5"],
+          "expected": "D7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Eb Dominant 7",
+          "notes": ["Eb4", "G4", "Bb4", "Db5"],
+          "expected": "Eb7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "E Dominant 7",
+          "notes": ["E4", "G#4", "B4", "D5"],
+          "expected": "E7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F Dominant 7",
+          "notes": ["F4", "A4", "C5", "Eb5"],
+          "expected": "F7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "F# Dominant 7",
+          "notes": ["F#4", "A#4", "C#5", "E5"],
+          "expected": "F#7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Gb Dominant 7",
+          "notes": ["Gb4", "Bb4", "Db5", "E5"],
+          "expected": "Gb7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "G Dominant 7",
+          "notes": ["G4", "B4", "D5", "F5"],
+          "expected": "G7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Ab Dominant 7",
+          "notes": ["Ab4", "C5", "Eb5", "Gb5"],
+          "expected": "Ab7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "A Dominant 7",
+          "notes": ["A4", "C#5", "E5", "G5"],
+          "expected": "A7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "Bb Dominant 7",
+          "notes": ["Bb4", "D5", "F5", "Ab5"],
+          "expected": "Bb7",
+          "minConfidence": 0.6
+        },
+        {
+          "name": "B Dominant 7",
+          "notes": ["B4", "D#5", "F#5", "A5"],
+          "expected": "B7",
+          "minConfidence": 0.6
+        }
+      ]
+    },
+    {
+      "category": "Dominant Ninth Chords",
+      "tests": [
+        {
+          "name": "C Dominant 9",
+          "notes": ["C3", "E4", "G4", "Bb4", "D5"],
+          "expected": "C9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "C# Dominant 9",
+          "notes": ["C#3", "E#4", "G#4", "B4", "D#5"],
+          "expected": "C#9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Db Dominant 9",
+          "notes": ["Db3", "F4", "Ab4", "B4", "Eb5"],
+          "expected": "Db9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "D Dominant 9",
+          "notes": ["D3", "F#4", "A4", "C5", "E5"],
+          "expected": "D9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Eb Dominant 9",
+          "notes": ["Eb3", "G4", "Bb4", "Db5", "F5"],
+          "expected": "Eb9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "E Dominant 9",
+          "notes": ["E3", "G#4", "B4", "D5", "F#5"],
+          "expected": "E9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F Dominant 9",
+          "notes": ["F3", "A4", "C5", "Eb5", "G5"],
+          "expected": "F9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F# Dominant 9",
+          "notes": ["F#3", "A#4", "C#5", "E5", "G#5"],
+          "expected": "F#9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Gb Dominant 9",
+          "notes": ["Gb3", "Bb4", "Db5", "E5", "Ab5"],
+          "expected": "Gb9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "G Dominant 9",
+          "notes": ["G3", "B4", "D5", "F5", "A5"],
+          "expected": "G9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Ab Dominant 9",
+          "notes": ["Ab3", "C5", "Eb5", "Gb5", "Bb5"],
+          "expected": "Ab9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "A Dominant 9",
+          "notes": ["A3", "C#5", "E5", "G5", "B5"],
+          "expected": "A9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Bb Dominant 9",
+          "notes": ["Bb3", "D5", "F5", "Ab5", "C6"],
+          "expected": "Bb9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "B Dominant 9",
+          "notes": ["B3", "D#5", "F#5", "A5", "C#6"],
+          "expected": "B9",
+          "minConfidence": 0.5
+        }
+      ]
+    },
+    {
+      "category": "Major Ninth Chords",
       "tests": [
         {
           "name": "C Major 9",
@@ -120,11 +905,88 @@
           "minConfidence": 0.5
         },
         {
-          "name": "C Dominant 9",
-          "notes": ["C3", "E4", "G4", "Bb4", "D5"],
-          "expected": "C9",
+          "name": "C# Major 9",
+          "notes": ["C#3", "E#4", "G#4", "B#4", "D#5"],
+          "expected": "C#maj9",
           "minConfidence": 0.5
         },
+        {
+          "name": "Db Major 9",
+          "notes": ["Db3", "F4", "Ab4", "C5", "Eb5"],
+          "expected": "Dbmaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "D Major 9",
+          "notes": ["D3", "F#4", "A4", "C#5", "E5"],
+          "expected": "Dmaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Eb Major 9",
+          "notes": ["Eb3", "G4", "Bb4", "D5", "F5"],
+          "expected": "Ebmaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "E Major 9",
+          "notes": ["E3", "G#4", "B4", "D#5", "F#5"],
+          "expected": "Emaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F Major 9",
+          "notes": ["F3", "A4", "C5", "E5", "G5"],
+          "expected": "Fmaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "F# Major 9",
+          "notes": ["F#3", "A#4", "C#5", "E#5", "G#5"],
+          "expected": "F#maj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Gb Major 9",
+          "notes": ["Gb3", "Bb4", "Db5", "F5", "Ab5"],
+          "expected": "Gbmaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "G Major 9",
+          "notes": ["G3", "B4", "D5", "F#5", "A5"],
+          "expected": "Gmaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Ab Major 9",
+          "notes": ["Ab3", "C5", "Eb5", "G5", "Bb5"],
+          "expected": "Abmaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "A Major 9",
+          "notes": ["A3", "C#5", "E5", "G#5", "B5"],
+          "expected": "Amaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Bb Major 9",
+          "notes": ["Bb3", "D5", "F5", "A5", "C6"],
+          "expected": "Bbmaj9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "B Major 9",
+          "notes": ["B3", "D#5", "F#5", "A#5", "C#6"],
+          "expected": "Bmaj9",
+          "minConfidence": 0.5
+        }
+      ]
+    },
+    {
+      "category": "Minor Ninth Chords",
+      "tests": [
         {
           "name": "C Minor 9",
           "notes": ["C3", "Eb4", "G4", "Bb4", "D5"],
@@ -132,131 +994,81 @@
           "minConfidence": 0.5
         },
         {
-          "name": "C Minor 11",
-          "notes": ["C3", "Eb4", "Bb4", "D5", "F5"],
-          "expected": "Cm11",
-          "minConfidence": 0.4
-        },
-        {
-          "name": "C Dominant 13",
-          "notes": ["C3", "E4", "Bb4", "D5", "A5"],
-          "expected": "C13",
-          "minConfidence": 0.4
-        },
-        {
-          "name": "C Major 6",
-          "notes": ["C4", "E4", "G4", "A4"],
-          "expected": "C6",
+          "name": "C# Minor 9",
+          "notes": ["C#3", "E4", "G#4", "B4", "D#5"],
+          "expected": "C#m9",
           "minConfidence": 0.5
         },
         {
-          "name": "C Major 6/9",
-          "notes": ["C3", "E4", "G4", "A4", "D5"],
-          "expected": "C6/9",
-          "minConfidence": 0.4
-        }
-      ]
-    },
-    {
-      "category": "Altered Dominants",
-      "tests": [
-        {
-          "name": "C7 flat 9",
-          "notes": ["C3", "E4", "G4", "Bb4", "Db5"],
-          "expected": "C7b9",
-          "minConfidence": 0.4
-        },
-        {
-          "name": "C7 sharp 9 (Hendrix)",
-          "notes": ["C3", "E4", "G4", "Bb4", "D#5"],
-          "expected": "C7#9",
-          "minConfidence": 0.4
-        },
-        {
-          "name": "C7 flat 5",
-          "notes": ["C3", "E4", "Gb4", "Bb4"],
-          "expected": "C7b5",
-          "minConfidence": 0.4
-        },
-        {
-          "name": "C7 sharp 5",
-          "notes": ["C3", "E4", "G#4", "Bb4"],
-          "expected": "C7#5",
-          "minConfidence": 0.4
-        },
-        {
-          "name": "C7 sus4",
-          "notes": ["C3", "F4", "G4", "Bb4"],
-          "expected": "C7sus4",
-          "minConfidence": 0.5
-        }
-      ]
-    },
-    {
-      "category": "Practical/Funk Voicings",
-      "tests": [
-        {
-          "name": "C Minor 6",
-          "notes": ["C4", "Eb4", "G4", "A4"],
-          "expected": "Cm6",
+          "name": "Db Minor 9",
+          "notes": ["Db3", "E4", "Ab4", "B4", "Eb5"],
+          "expected": "Dbm9",
           "minConfidence": 0.5
         },
         {
-          "name": "C Add9",
-          "notes": ["C4", "E4", "G4", "D5"],
-          "expected": "Cadd9",
-          "minConfidence": 0.5
-        }
-      ]
-    },
-    {
-      "category": "Inversions",
-      "tests": [
-        {
-          "name": "C Major 1st Inversion",
-          "notes": ["E3", "G3", "C4"],
-          "expected": "C/E",
+          "name": "D Minor 9",
+          "notes": ["D3", "F4", "A4", "C5", "E5"],
+          "expected": "Dm9",
           "minConfidence": 0.5
         },
         {
-          "name": "C Major 2nd Inversion",
-          "notes": ["G3", "C4", "E4"],
-          "expected": "C/G",
+          "name": "Eb Minor 9",
+          "notes": ["Eb3", "Gb4", "Bb4", "Db5", "F5"],
+          "expected": "Ebm9",
           "minConfidence": 0.5
         },
         {
-          "name": "C Minor 1st Inversion",
-          "notes": ["Eb3", "G3", "C4"],
-          "expected": "Cm/Eb",
+          "name": "E Minor 9",
+          "notes": ["E3", "G4", "B4", "D5", "F#5"],
+          "expected": "Em9",
           "minConfidence": 0.5
         },
         {
-          "name": "Dm7 1st Inversion",
-          "notes": ["F3", "A3", "C4", "D4"],
-          "expected": "Dm7/F",
-          "minConfidence": 0.5
-        }
-      ]
-    },
-    {
-      "category": "Different Octaves",
-      "tests": [
-        {
-          "name": "C Major Wide Voicing",
-          "notes": ["C3", "G3", "E4"],
-          "expected": "C",
+          "name": "F Minor 9",
+          "notes": ["F3", "Ab4", "C5", "Eb5", "G5"],
+          "expected": "Fm9",
           "minConfidence": 0.5
         },
         {
-          "name": "C Major Low Register",
-          "notes": ["C2", "E2", "G2"],
-          "expected": "C",
+          "name": "F# Minor 9",
+          "notes": ["F#3", "A4", "C#5", "E5", "G#5"],
+          "expected": "F#m9",
           "minConfidence": 0.5
         },
         {
-          "name": "C Major High Register",
-          "notes": ["C5", "E5", "G5"],
-          "expected": "C",
+          "name": "Gb Minor 9",
+          "notes": ["Gb3", "A4", "Db5", "E5", "Ab5"],
+          "expected": "Gbm9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "G Minor 9",
+          "notes": ["G3", "Bb4", "D5", "F5", "A5"],
+          "expected": "Gm9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Ab Minor 9",
+          "notes": ["Ab3", "B4", "Eb5", "Gb5", "Bb5"],
+          "expected": "Abm9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "A Minor 9",
+          "notes": ["A3", "C5", "E5", "G5", "B5"],
+          "expected": "Am9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "Bb Minor 9",
+          "notes": ["Bb3", "Db5", "F5", "Ab5", "C6"],
+          "expected": "Bbm9",
+          "minConfidence": 0.5
+        },
+        {
+          "name": "B Minor 9",
+          "notes": ["B3", "D5", "F#5", "A5", "C#6"],
+          "expected": "Bm9",
           "minConfidence": 0.5
         }
       ]
