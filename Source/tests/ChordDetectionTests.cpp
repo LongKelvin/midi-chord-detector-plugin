@@ -50,6 +50,7 @@ struct TestCase
 };
 
 // Convert note name to MIDI number with full enharmonic support
+// Handles octave shifts when # or b causes pitch class rollover
 int noteNameToMidi(const char* noteName)
 {
     if (!noteName || strlen(noteName) < 2)
@@ -71,22 +72,30 @@ int noteNameToMidi(const char* noteName)
     }
     
     int offset = 1;
+    int octaveAdjust = 0;  // For handling B#->C or Cb->B crossings
     
-    // Handle accidentals with proper enharmonic equivalence
+    // Handle accidentals with proper enharmonic equivalence AND octave shifts
     if (noteName[1] == '#')
     {
-        pitchClass = (pitchClass + 1) % 12;
-        offset = 2;
+        int newPitchClass = (pitchClass + 1) % 12;
         
-        // E# = F (enharmonic), B# = C (enharmonic)
-        // Already handled by modulo 12
+        // B# -> C: pitch class rolls over from 11 to 0, octave increases
+        if (pitchClass == 11 && newPitchClass == 0)
+            octaveAdjust = 1;
+            
+        pitchClass = newPitchClass;
+        offset = 2;
     }
     else if (noteName[1] == 'b')
     {
-        pitchClass = (pitchClass + 11) % 12;  // Subtract 1 (modulo 12)
-        offset = 2;
+        int newPitchClass = (pitchClass + 11) % 12;  // Subtract 1 (modulo 12)
         
-        // Cb = B, Fb = E (enharmonic) - already handled by modulo
+        // Cb -> B: pitch class rolls over from 0 to 11, octave decreases
+        if (pitchClass == 0 && newPitchClass == 11)
+            octaveAdjust = -1;
+            
+        pitchClass = newPitchClass;
+        offset = 2;
     }
     
     // IMPROVED: Validate string length before accessing octave
@@ -96,6 +105,9 @@ int noteNameToMidi(const char* noteName)
     int octave = noteName[offset] - '0';
     if (octave < 0 || octave > 9)
         return -1;
+    
+    // Apply octave adjustment for enharmonic crossings
+    octave += octaveAdjust;
     
     return (octave + 1) * 12 + pitchClass;
 }

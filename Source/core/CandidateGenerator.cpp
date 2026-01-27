@@ -172,37 +172,184 @@ int CandidateGenerator::generateCandidatesFromChroma(
                 if (rootPresent)
                     adjustedScore *= 1.1f;
                 else
-                    adjustedScore *= 0.7f;  // Significant penalty without root
+                    adjustedScore *= 0.55f;  // STRONGER penalty without root
+            }
+            
+            // ================================================================
+            // CHARACTERISTIC INTERVAL DETECTION
+            // These intervals DEFINE the chord type and should be rewarded
+            // CRITICAL: Only trust these when root IS present!
+            // Without root, interval positions are ambiguous.
+            // ================================================================
+            
+            // Check for intervals (only meaningful when root is present)
+            bool hasB5 = bins[6] > 0.1f;
+            bool hasP5 = bins[7] > 0.1f;
+            bool hasSharp5 = bins[8] > 0.1f;
+            bool hasMinor7 = bins[10] > 0.1f;
+            bool hasMajor7 = bins[11] > 0.1f;
+            bool has9th = bins[2] > 0.1f;
+            bool hasM3 = bins[4] > 0.1f;
+            bool hasm3 = bins[3] > 0.1f;
+            
+            // Template name check helpers
+            bool isDimTemplate = (tpl.name != nullptr && 
+                (strcmp(tpl.name, "dim") == 0 || strcmp(tpl.name, "dim7") == 0 || strcmp(tpl.name, "m7b5") == 0));
+            bool isAugTemplate = (tpl.name != nullptr && 
+                (strcmp(tpl.name, "aug") == 0 || strcmp(tpl.name, "augMaj7") == 0));
+            bool is7thTemplate = (tpl.name != nullptr && 
+                (strcmp(tpl.name, "7") == 0 || strcmp(tpl.name, "maj7") == 0 || strcmp(tpl.name, "m7") == 0 ||
+                 strcmp(tpl.name, "dim7") == 0 || strcmp(tpl.name, "m7b5") == 0));
+            bool is9thTemplate = (tpl.name != nullptr && 
+                (strcmp(tpl.name, "9") == 0 || strcmp(tpl.name, "maj9") == 0 || strcmp(tpl.name, "m9") == 0));
+            bool isMinorTemplate = (tpl.name != nullptr && 
+                (strcmp(tpl.name, "m") == 0 || strcmp(tpl.name, "m7") == 0 || strcmp(tpl.name, "m9") == 0));
+            bool isMajorTemplate = (tpl.name != nullptr && strcmp(tpl.name, "") == 0);
+            bool isTriadTemplate = (tpl.name != nullptr && 
+                (strcmp(tpl.name, "") == 0 || strcmp(tpl.name, "m") == 0 || 
+                 strcmp(tpl.name, "dim") == 0 || strcmp(tpl.name, "aug") == 0 ||
+                 strcmp(tpl.name, "sus2") == 0 || strcmp(tpl.name, "sus4") == 0));
+            
+            // ================================================================
+            // CRITICAL: Characteristic interval detection ONLY when root is present
+            // Without root, what looks like "b5" might just be a different chord
+            // ================================================================
+            if (rootPresent)
+            {
+                // Diminished detection: if b5 present without P5, boost dim templates
+                if (hasB5 && !hasP5)
+                {
+                    if (isDimTemplate)
+                        adjustedScore *= 1.25f;  // Big boost for dim when b5 is the characteristic
+                    else if (isMinorTemplate || isMajorTemplate)
+                        adjustedScore *= 0.7f;   // Penalize major/minor when b5 is present
+                }
+                
+                // If P5 is present, penalize dim/aug (they shouldn't have P5)
+                if (hasP5)
+                {
+                    if (isDimTemplate || isAugTemplate)
+                        adjustedScore *= 0.6f;   // Strong penalty
+                }
+                
+                // Augmented detection: if #5 present without P5, boost aug templates  
+                if (hasSharp5 && !hasP5)
+                {
+                    if (isAugTemplate)
+                        adjustedScore *= 1.25f;  // Big boost for aug when #5 is the characteristic
+                    else if (isMajorTemplate)
+                        adjustedScore *= 0.7f;   // Penalize major when #5 is present
+                }
+                
+                // 7th chord detection: if 7th interval present, boost 7th templates
+                if (hasMajor7 || hasMinor7)
+                {
+                    if (is7thTemplate || is9thTemplate)
+                        adjustedScore *= 1.2f;   // Boost 7th/9th templates when 7th is present
+                }
+                else
+                {
+                    // CRITICAL: Penalize 7th/9th templates when NO 7th is present
+                    // This prevents triads from being detected as 7th chords
+                    if (is7thTemplate)
+                        adjustedScore *= 0.65f;  // Strong penalty for 7th template without 7th
+                    if (is9thTemplate)
+                        adjustedScore *= 0.55f;  // Even stronger penalty for 9th template without 7th
+                }
+                
+                // 9th chord detection: if 9th interval present AND 7th, boost 9th templates
+                if (has9th && (hasMajor7 || hasMinor7))
+                {
+                    if (is9thTemplate)
+                        adjustedScore *= 1.15f;  // Extra boost for 9th templates
+                    else if (is7thTemplate)
+                        adjustedScore *= 0.95f;  // Slight penalty for plain 7th when 9th present
+                }
+            }
+            else
+            {
+                // Root NOT present - be very skeptical of complex chord interpretations
+                // When root is missing, prefer simpler triads over extensions
+                if (!isTriadTemplate)
+                    adjustedScore *= 0.75f;  // Additional penalty for complex templates without root
             }
             
             // Bass note alignment bonus
             if (bassPitchClass >= 0)
             {
                 int bassRelative = (bassPitchClass - rootPC + 12) % 12;
-                if (bassRelative == 0)
+                
+                // ================================================================
+                // SPECIAL HANDLING FOR SYMMETRIC CHORDS
+                // Augmented triads are symmetric (Caug=Eaug=G#aug) with chord tones
+                // at intervals 0, 4, 8 (root, M3, #5). All inversions are equivalent.
+                // Convention: name by the BASS note when it's a chord tone.
+                // ================================================================
+                if (isAugTemplate)
                 {
-                    // Bass is root - small bonus (prioritize similarity over bass)
-                    adjustedScore *= 1.02f;
+                    // Augmented chord tones: root(0), M3(4), #5(8)
+                    // If bass is one of these, prefer root=bass
+                    if (bassRelative == 0)
+                    {
+                        // Bass is root - STRONG bonus for symmetric chord naming
+                        adjustedScore *= 1.25f;
+                    }
+                    else if (bassRelative == 4 || bassRelative == 8)
+                    {
+                        // Bass is M3 or #5 - STRONG penalty (prefer bass as root)
+                        adjustedScore *= 0.55f;
+                    }
+                    else
+                    {
+                        // Bass not a chord tone - unusual, penalize
+                        adjustedScore *= 0.75f;
+                    }
                 }
-                else if (bassRelative == 7)
+                // Diminished 7th chords are also symmetric (every 3 semitones)
+                // Chord tones: root(0), m3(3), b5(6), dim7(9)
+                else if (tpl.name != nullptr && strcmp(tpl.name, "dim7") == 0)
                 {
-                    // Bass is 5th - neutral (2nd inversion)
-                    adjustedScore *= 1.0f;
-                }
-                else if (bassRelative == 4 || bassRelative == 3)
-                {
-                    // Bass is 3rd (major or minor) - neutral (1st inversion is valid)
-                    adjustedScore *= 1.0f;
-                }
-                else if (bassRelative == 10)
-                {
-                    // Bass is b7 - acceptable for dominant family
-                    adjustedScore *= 0.98f;
+                    if (bassRelative == 0)
+                    {
+                        adjustedScore *= 1.25f;
+                    }
+                    else if (bassRelative == 3 || bassRelative == 6 || bassRelative == 9)
+                    {
+                        adjustedScore *= 0.55f;
+                    }
+                    else
+                    {
+                        adjustedScore *= 0.75f;
+                    }
                 }
                 else
                 {
-                    // Bass is unusual - could be slash chord or mismatch
-                    adjustedScore *= 0.90f;
+                    // Non-symmetric chords: normal bass handling
+                    if (bassRelative == 0)
+                    {
+                        // Bass is root - small bonus
+                        adjustedScore *= 1.02f;
+                    }
+                    else if (bassRelative == 7)
+                    {
+                        // Bass is 5th - neutral (2nd inversion)
+                        adjustedScore *= 1.0f;
+                    }
+                    else if (bassRelative == 4 || bassRelative == 3)
+                    {
+                        // Bass is 3rd (major or minor) - neutral (1st inversion)
+                        adjustedScore *= 1.0f;
+                    }
+                    else if (bassRelative == 10)
+                    {
+                        // Bass is b7 - acceptable for dominant family
+                        adjustedScore *= 0.98f;
+                    }
+                    else
+                    {
+                        // Bass is unusual - could be slash chord or mismatch
+                        adjustedScore *= 0.90f;
+                    }
                 }
             }
             

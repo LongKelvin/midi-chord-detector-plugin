@@ -40,16 +40,18 @@ struct ChromaWeights
     int harmonyUpperBound = 60;
     float harmonyWeight = 1.0f;
     
-    // Notes 60-72 = mid weight (chord voicing region)
+    // Notes 60-72 = full weight (chord voicing region)
     int midUpperBound = 72;
     float midWeight = 1.0f;
     
-    // Notes 72-84 = reduced weight (melody region)
+    // Notes 72-84 = slightly reduced weight (melody region)
+    // NOTE: Increased from 0.5 to 0.85 to better detect 7ths/9ths
     int melodyUpperBound = 84;
-    float melodyWeight = 0.5f;
+    float melodyWeight = 0.85f;
     
-    // Notes above 84 = very low weight (sparkle/ornaments)
-    float highWeight = 0.2f;
+    // Notes above 84 = reduced weight (sparkle/ornaments)
+    // NOTE: Increased from 0.2 to 0.5
+    float highWeight = 0.5f;
     
     // Sustained note decay (weight multiplier per 100ms)
     float sustainDecayRate = 0.85f;
