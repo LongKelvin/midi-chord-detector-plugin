@@ -140,29 +140,54 @@ float ConfidenceScorer::calculateBassAlignment(
 ) const
 {
     if (bassPitchClass < 0)
-        return 0.8f;  // No bass info - neutral
+        return 0.80f;  // No bass info - neutral
     
-    // Root position = highest score (but don't over-penalize inversions)
+    // ROOT POSITION - Strong preference for bass = root
+    // Critical for disambiguating enharmonic equivalents:
+    // - Csus2 (root=C, bass=C) vs D7sus4/C (root=D, bass=C) - same notes!
+    // - C6 (root=C, bass=C) vs Am7/C (root=A, bass=C) - same notes!
     if (hyp.bassPitchClass == hyp.rootPitchClass)
-        return 1.0f;
+    {
+        // Scale bonus by template match quality
+        // High similarity = strong bonus, low similarity = weak bonus
+        float matchBonus = 0.0f;
+        if (hyp.cosineSimilarity >= 0.70f)
+        {
+            // Good template match + root position = definitive
+            matchBonus = 0.12f;
+        }
+        else if (hyp.cosineSimilarity >= 0.55f)
+        {
+            // Moderate match + root position = prefer
+            matchBonus = 0.06f;
+        }
+        // Complexity bonus (simpler root position chords are more likely intended)
+        if (hyp.complexity == 1)
+            matchBonus += 0.04f;
+        else if (hyp.complexity == 2)
+            matchBonus += 0.02f;
+        
+        return 1.0f + matchBonus;
+    }
     
     // Calculate bass interval relative to root
     int bassInterval = (bassPitchClass - hyp.rootPitchClass + 12) % 12;
     
-    // Common chord tone intervals (don't need formula lookup):
+    // Standard inversions (bass is a chord tone) - good but not as preferred as root
     // 3 = minor 3rd, 4 = major 3rd, 7 = perfect 5th
-    // 10 = minor 7th, 11 = major 7th
     if (bassInterval == 3 || bassInterval == 4 || bassInterval == 7)
-        return 0.95f;  // Standard inversion (3rd or 5th in bass) - almost as good as root
+        return 0.94f;  // 1st/2nd inversion
     
+    // 7th in bass (3rd inversion)
     if (bassInterval == 10 || bassInterval == 11)
-        return 0.85f;  // 7th in bass (3rd inversion)
+        return 0.88f;
     
-    if (bassInterval == 2 || bassInterval == 9)  // 9th or 6th
-        return 0.75f;  // Extension in bass
+    // Extension in bass (9th or 6th)
+    if (bassInterval == 2 || bassInterval == 9)
+        return 0.80f;
     
-    // Slash chord (bass not a typical chord tone)
-    return 0.5f;
+    // Non-chord-tone bass (true slash chord) - penalize
+    return 0.55f;
 }
 
 float ConfidenceScorer::calculateTemporalStability(

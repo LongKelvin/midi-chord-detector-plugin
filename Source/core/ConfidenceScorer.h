@@ -73,16 +73,16 @@ struct ScoringWeights
 {
     float intervalCoverage;     // High
     float missingCoreTones;     // High (penalty)
-    float bassAlignment;        // Medium
-    float temporalStability;    // Very High
+    float bassAlignment;        // High - critical for disambiguating enharmonic equivalents
+    float temporalStability;    // High
     float complexityPenalty;    // Medium
     float velocityWeight;       // Low
     
     ScoringWeights()
         : intervalCoverage(0.25f)
-        , missingCoreTones(0.20f)
-        , bassAlignment(0.15f)
-        , temporalStability(0.30f)
+        , missingCoreTones(0.18f)
+        , bassAlignment(0.25f)     // Increased from 0.15 for better root position preference
+        , temporalStability(0.22f) // Slightly reduced for better instantaneous detection
         , complexityPenalty(0.05f)
         , velocityWeight(0.05f)
     {}

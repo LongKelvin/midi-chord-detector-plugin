@@ -60,208 +60,331 @@ struct ChordTemplate
  * - Root: 1.0
  * - 3rd (defines quality): 1.0
  * - 7th (defines chord type): 1.0
- * - 5th: 0.2 (CRITICAL: often omitted in jazz!)
- * - Extensions: 0.3-0.5
+ * - 5th: 0.2-0.6 (often omitted in jazz)
+ * - Extensions: 0.3-0.8
  */
 constexpr ChordTemplate CHORD_TEMPLATES[] = {
     
     // ========== MAJOR FAMILY ==========
     
-    // Major Triad: C-E-G (displayed as just "C", not "Cmaj")
-    // NOTE: P5 weight increased to 0.8 to avoid confusion with augmented
+    // Major Triad: C-E-G
     {"", "Major",
      {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f},
      1, 1.1f, false},
     
     // Major 7: C-E-G-B
-    // NOTE: Priority lowered - will get boost when 7th is present in input
     {"maj7", "Major 7th",
-     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.6f, 0.0f, 0.0f, 0.0f, 1.0f},
-     2, 1.0f, false},
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f},
+     2, 1.15f, false},
     
-    // Major 7 Shell: E-B (3rd + 7th, no root) - very common jazz voicing
+    // Major 7 Shell
     {"maj7", "Major 7th",
      {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f},
-     2, 0.95f, true},
+     2, 0.9f, true},
     
     // Major 9: C-E-G-B-D
-    // NOTE: Priority lowered - will get boost when 9th is present
     {"maj9", "Major 9th",
-     {1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f},
-     2, 1.0f, false},
+     {1.0f, 0.0f, 0.9f, 0.0f, 1.0f, 0.0f, 0.0f, 0.4f, 0.0f, 0.0f, 0.0f, 1.0f},
+     2, 1.2f, false},
     
-    // Major 6: C-E-G-A
+    // Major 11: C-E-G-B-D-F
+    {"maj11", "Major 11th",
+     {1.0f, 0.0f, 0.6f, 0.0f, 1.0f, 0.8f, 0.0f, 0.2f, 0.0f, 0.0f, 0.0f, 1.0f},
+     3, 1.45f, false},
+    
+    // Major 7#11: C-E-G-B-F#
+    {"maj7#11", "Major 7th #11",
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.9f, 0.3f, 0.0f, 0.0f, 0.0f, 1.0f},
+     3, 1.4f, false},
+    
+    // Major 13: C-E-G-B-D-A
+    {"maj13", "Major 13th",
+     {1.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.9f, 0.0f, 1.0f},
+     3, 1.45f, false},
+    
+    // Major 6: C-E-G-A - VERY HIGH PRIORITY over m7 inversions
     {"6", "Major 6th",
-     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.7f, 0.0f, 0.0f},
-     2, 0.95f, false},
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f},
+     2, 1.55f, false},
     
     // Major 6/9: C-E-G-A-D
     {"6/9", "Major 6/9",
-     {1.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.7f, 0.0f, 0.0f},
-     3, 1.0f, false},
+     {1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f},
+     3, 1.6f, false},
     
-    // Add9: C-E-G-D (add9, no 7th)
+    // Add9: C-E-G-D - VERY HIGH PRIORITY over 9sus4 inversions
     {"add9", "Add 9",
-     {1.0f, 0.0f, 0.6f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.0f, 0.0f},
-     2, 0.9f, false},
+     {1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f},
+     2, 1.55f, false},
+    
+    // Add4/Add11: C-E-G-F
+    {"add11", "Add 11",
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.8f, 0.0f, 0.4f, 0.0f, 0.0f, 0.0f, 0.0f},
+     2, 1.05f, false},
     
     // ========== MINOR FAMILY ==========
     
     // Minor Triad: C-Eb-G
-    // NOTE: P5 weight increased to 0.8 to differentiate from diminished
     {"m", "Minor",
      {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f},
      1, 1.1f, false},
     
     // Minor 7: C-Eb-G-Bb
-    // NOTE: Priority lowered - will get boost when 7th is present
     {"m7", "Minor 7th",
-     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.6f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.0f, false},
+     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.15f, false},
     
-    // Minor 7 Shell: Eb-Bb (m3 + b7, no root) - common jazz voicing
+    // Minor 7 Shell
     {"m7", "Minor 7th",
      {0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 0.95f, true},
+     2, 0.9f, true},
     
     // Minor 9: C-Eb-G-Bb-D
-    // NOTE: Priority lowered - will get boost when 9th is present
     {"m9", "Minor 9th",
-     {1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.0f, false},
+     {1.0f, 0.0f, 0.9f, 1.0f, 0.0f, 0.0f, 0.0f, 0.4f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.2f, false},
     
     // Minor 11: C-Eb-G-Bb-D-F
     {"m11", "Minor 11th",
-     {1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.8f, 0.0f, 0.1f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.4f, false},
+     {1.0f, 0.0f, 0.6f, 1.0f, 0.0f, 0.9f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.45f, false},
     
-    // Minor 6: C-Eb-G-A
+    // Minor 13: C-Eb-G-Bb-D-F-A (often omits 11th)
+    {"m13", "Minor 13th",
+     {1.0f, 0.0f, 0.6f, 1.0f, 0.0f, 0.5f, 0.0f, 0.3f, 0.0f, 1.0f, 1.0f, 0.0f},
+     3, 1.55f, false},
+    
+    // Minor 6: C-Eb-G-A - VERY HIGH PRIORITY over m7b5 inversions
     {"m6", "Minor 6th",
-     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.7f, 0.0f, 0.0f},
-     2, 0.95f, false},
+     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f},
+     2, 1.55f, false},
     
-    // Minor/Major 7: C-Eb-G-B (minor with major 7th) - jazz/film-noir chord
-    {"mMaj7", "Minor/Major 7th",
-     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.0f, 1.0f},
-     2, 1.3f, false},
+    // Minor 6/9: C-Eb-G-A-D
+    {"m6/9", "Minor 6/9",
+     {1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f},
+     3, 1.6f, false},
+    
+    // Minor/Major 7: C-Eb-G-B
+    {"m(maj7)", "Minor/Major 7th",
+     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.4f, 0.0f, 0.0f, 0.0f, 1.0f},
+     2, 1.35f, false},
+    
+    // Minor/Major 9: C-Eb-G-B-D
+    {"m(maj9)", "Minor/Major 9th",
+     {1.0f, 0.0f, 0.8f, 1.0f, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.0f, 1.0f},
+     3, 1.4f, false},
+    
+    // Minor add9: C-Eb-G-D - VERY HIGH PRIORITY
+    {"madd9", "Minor Add 9",
+     {1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f},
+     2, 1.55f, false},
     
     // ========== DOMINANT FAMILY ==========
     
     // Dominant 7: C-E-G-Bb
-    // NOTE: Priority lowered - will get boost when 7th is present in input
     {"7", "Dominant 7th",
-     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.6f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.0f, false},
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.15f, false},
     
-    // Dominant 7 Shell: E-Bb (M3 + b7) - the tritone! Most important jazz shell
+    // Dominant 7 Shell
     {"7", "Dominant 7th",
      {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 0.95f, true},  // Higher priority - tritone is definitive
+     2, 0.9f, true},
     
     // Dominant 9: C-E-G-Bb-D
-    // NOTE: Priority lowered - will get boost when 9th is present
     {"9", "Dominant 9th",
-     {1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.0f, false},
+     {1.0f, 0.0f, 0.9f, 0.0f, 1.0f, 0.0f, 0.0f, 0.4f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.2f, false},
     
-    // Dominant 13: C-E-Bb-A (5th and 9th often omitted in jazz)
+    // Dominant 11: C-E-G-Bb-D-F
+    {"11", "Dominant 11th",
+     {1.0f, 0.0f, 0.6f, 0.0f, 1.0f, 0.9f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.45f, false},
+    
+    // Dominant 13: C-E-Bb-D-A
     {"13", "Dominant 13th",
-     {1.0f, 0.0f, 0.3f, 0.0f, 1.0f, 0.0f, 0.0f, 0.1f, 0.0f, 0.9f, 1.0f, 0.0f},
-     2, 1.4f, false},
+     {1.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.9f, 1.0f, 0.0f},
+     2, 1.45f, false},
     
     // 7sus4: C-F-G-Bb
     {"7sus4", "Dominant 7th Sus4",
-     {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.4f, 0.0f, 0.0f, 1.0f, 0.0f},
      2, 1.25f, false},
     
-    // 7#9 (Hendrix chord): C-E-G-Bb-D# (has both M3 and #9/m3)
-    {"7#9", "Dominant 7th #9",
-     {1.0f, 0.0f, 0.0f, 0.9f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.3f, false},
+    // 9sus4: C-F-G-Bb-D - Lower priority vs add9
+    {"9sus4", "Dominant 9th Sus4",
+     {1.0f, 0.0f, 0.8f, 0.0f, 0.0f, 1.0f, 0.0f, 0.3f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.2f, false},
+    
+    // 13sus4: C-F-G-Bb-D-A
+    {"13sus4", "Dominant 13th Sus4",
+     {1.0f, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.2f, 0.0f, 0.9f, 1.0f, 0.0f},
+     3, 1.35f, false},
+    
+    // ========== ALTERED DOMINANT FAMILY ==========
     
     // 7b9: C-E-G-Bb-Db
     {"7b9", "Dominant 7th b9",
-     {1.0f, 0.6f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
-     3, 1.1f, false},
+     {1.0f, 0.9f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.35f, false},
     
-    // 7#5 (Aug7): C-E-G#-Bb
-    {"7#5", "Dominant 7th #5",
-     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.8f, 0.0f, 1.0f, 0.0f},
-     3, 1.0f, false},
+    // 7#9: C-E-G-Bb-D#
+    {"7#9", "Dominant 7th #9",
+     {1.0f, 0.0f, 0.0f, 0.9f, 1.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.35f, false},
     
     // 7b5: C-E-Gb-Bb
     {"7b5", "Dominant 7th b5",
-     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.8f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f},
-     3, 1.0f, false},
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, -0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.3f, false},
     
-    // 7alt (multiple alterations): C-E-Gb-Bb-Db or C-E-G#-Bb-D#
+    // 7#5: C-E-G#-Bb
+    {"7#5", "Dominant 7th #5",
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -0.2f, 1.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.3f, false},
+    
+    // 7#11: C-E-G-Bb-F#
+    {"7#11", "Dominant 7th #11",
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.9f, 0.3f, 0.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.4f, false},
+    
+    // 7b13: C-E-G-Bb-Ab
+    {"7b13", "Dominant 7th b13",
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.3f, 0.9f, 0.0f, 1.0f, 0.0f},
+     3, 1.4f, false},
+    
+    // 9b5: C-E-Gb-Bb-D
+    {"9b5", "Dominant 9th b5",
+     {1.0f, 0.0f, 0.8f, 0.0f, 1.0f, 0.0f, 1.0f, -0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.4f, false},
+    
+    // 9#5: C-E-G#-Bb-D - higher priority over 7#5 when 9 present
+    {"9#5", "Dominant 9th #5",
+     {1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, -0.1f, 1.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.55f, false},
+    
+    // 9#11: C-E-G-Bb-D-F#
+    {"9#11", "Dominant 9th #11",
+     {1.0f, 0.0f, 0.8f, 0.0f, 1.0f, 0.0f, 0.9f, 0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.45f, false},
+    
+    // 7b9b5: C-E-Gb-Bb-Db
+    {"7b9b5", "Dominant 7th b9 b5",
+     {1.0f, 0.9f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, -0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     4, 1.5f, false},
+    
+    // 7#9b5: C-E-Gb-Bb-D#
+    {"7#9b5", "Dominant 7th #9 b5",
+     {1.0f, 0.0f, 0.0f, 0.9f, 1.0f, 0.0f, 1.0f, -0.2f, 0.0f, 0.0f, 1.0f, 0.0f},
+     4, 1.5f, false},
+    
+    // 7b9#5: C-E-G#-Bb-Db
+    {"7b9#5", "Dominant 7th b9 #5",
+     {1.0f, 0.9f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -0.2f, 1.0f, 0.0f, 1.0f, 0.0f},
+     4, 1.5f, false},
+    
+    // 7#9#5: C-E-G#-Bb-D#
+    {"7#9#5", "Dominant 7th #9 #5",
+     {1.0f, 0.0f, 0.0f, 0.9f, 1.0f, 0.0f, 0.0f, -0.2f, 1.0f, 0.0f, 1.0f, 0.0f},
+     4, 1.5f, false},
+    
+    // 7alt: C-E-Gb/G#-Bb-Db/D#
     {"7alt", "Altered Dominant",
-     {1.0f, 0.5f, 0.0f, 0.5f, 1.0f, 0.0f, 0.5f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f},
-     4, 1.15f, false},
+     {1.0f, 0.5f, 0.0f, 0.5f, 1.0f, 0.0f, 0.5f, -0.2f, 0.5f, 0.0f, 1.0f, 0.0f},
+     4, 1.3f, false},
+    
+    // 13b9: C-E-G-Bb-Db-A
+    {"13b9", "Dominant 13th b9",
+     {1.0f, 0.9f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.9f, 1.0f, 0.0f},
+     3, 1.5f, false},
+    
+    // 13#9: C-E-G-Bb-D#-A
+    {"13#9", "Dominant 13th #9",
+     {1.0f, 0.0f, 0.0f, 0.9f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.9f, 1.0f, 0.0f},
+     3, 1.5f, false},
+    
+    // 13#11: C-E-G-Bb-D-F#-A
+    {"13#11", "Dominant 13th #11",
+     {1.0f, 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.8f, 0.2f, 0.0f, 0.9f, 1.0f, 0.0f},
+     3, 1.5f, false},
+    
+    // 13b9b13: C-E-G-Bb-Db-Ab (yes, both b13 and 13!)
+    {"13b9b13", "Dominant 13th b9 b13",
+     {1.0f, 0.9f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.2f, 0.8f, 0.0f, 1.0f, 0.0f},
+     4, 1.55f, false},
     
     // ========== DIMINISHED FAMILY ==========
     
-    // Diminished Triad: C-Eb-Gb (b5 defines the chord - NO P5!)
-    // NOTE: b5 weight increased to 1.5, NO weight at P5 to clearly differentiate from minor
-    // Higher priority than minor triad to win when b5 is present
+    // Diminished Triad: C-Eb-Gb
     {"dim", "Diminished",
-     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.5f, -0.3f, 0.0f, 0.0f, 0.0f, 0.0f},
-     1, 1.3f, false},
+     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.2f, -0.3f, 0.0f, 0.0f, 0.0f, 0.0f},
+     1, 1.15f, false},
     
-    // Diminished 7: C-Eb-Gb-Bbb (A) - symmetrical chord
+    // Diminished 7: C-Eb-Gb-Bbb - MUCH HIGHER PRIORITY
     {"dim7", "Diminished 7th",
-     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.5f, -0.3f, 0.0f, 1.0f, 0.0f, 0.0f},
-     2, 1.4f, false},
+     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.2f, -0.3f, 0.0f, 1.0f, 0.0f, 0.0f},
+     2, 1.55f, false},
     
     // Half-Diminished (m7b5): C-Eb-Gb-Bb
     {"m7b5", "Half Diminished",
-     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.3f, -0.3f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.35f, false},
+     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.2f, -0.3f, 0.0f, 0.0f, 1.0f, 0.0f},
+     2, 1.4f, false},
     
-    // Half-Dim Shell: Eb-Bb with b5 context
+    // Half-Dim Shell
     {"m7b5", "Half Diminished",
      {0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f},
-     2, 1.3f, true},
+     2, 1.25f, true},
+    
+    // Half-Dim 9: C-Eb-Gb-Bb-D
+    {"m7b5(9)", "Half Diminished 9",
+     {1.0f, 0.0f, 0.9f, 1.0f, 0.0f, 0.0f, 1.2f, -0.3f, 0.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.5f, false},
+    
+    // Half-Dim 11 (m11b5): C-Eb-Gb-Bb-D-F
+    {"m11b5", "Minor 11th b5",
+     {1.0f, 0.0f, 0.7f, 1.0f, 0.0f, 0.9f, 1.2f, -0.3f, 0.0f, 0.0f, 1.0f, 0.0f},
+     3, 1.55f, false},
     
     // ========== AUGMENTED FAMILY ==========
     
-    // Augmented Triad: C-E-G# (#5 defines the chord - NO P5!)
-    // NOTE: #5 weight increased to 1.5, negative weight at P5 to clearly differentiate from major
-    // Higher priority than major triad to win when #5 is present
+    // Augmented Triad: C-E-G#
     {"aug", "Augmented",
-     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -0.3f, 1.5f, 0.0f, 0.0f, 0.0f},
-     1, 1.3f, false},
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -0.3f, 1.2f, 0.0f, 0.0f, 0.0f},
+     1, 1.25f, false},
     
     // Augmented Major 7: C-E-G#-B
-    {"augMaj7", "Augmented Major 7th",
-     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -0.3f, 1.3f, 0.0f, 0.0f, 1.0f},
-     2, 1.35f, false},
+    {"augmaj7", "Augmented Major 7th",
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -0.3f, 1.2f, 0.0f, 0.0f, 1.0f},
+     2, 1.4f, false},
+    
+    // Augmented 7 (7#5): C-E-G#-Bb (duplicate but for alt naming)
+    {"aug7", "Augmented 7th",
+     {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -0.3f, 1.2f, 0.0f, 1.0f, 0.0f},
+     2, 1.28f, false},
     
     // ========== SUSPENDED FAMILY ==========
     
-    // Sus2: C-D-G
-    // NOTE: P5 increased for better triad detection
+    // Sus2: C-D-G - HIGH PRIORITY over inversions
     {"sus2", "Suspended 2nd",
-     {1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f},
-     1, 0.95f, false},
+     {1.0f, 0.0f, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f},
+     1, 1.4f, false},
     
     // Sus4: C-F-G
-    // NOTE: P5 increased for better triad detection
     {"sus4", "Suspended 4th",
      {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f},
-     1, 0.95f, false},
+     1, 1.0f, false},
     
-    // ========== SPECIAL/QUARTAL ==========
+    // Sus2/4: C-D-F-G (has both 2nd and 4th)
+    {"sus2/4", "Suspended 2nd/4th",
+     {1.0f, 0.0f, 0.9f, 0.0f, 0.0f, 0.9f, 0.0f, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f},
+     2, 1.1f, false},
     
-    // Power Chord: C-G (ambiguous - no 3rd)
+    // ========== POWER AND SPECIAL ==========
+    
+    // Power Chord: C-G
     {"5", "Power Chord",
      {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f},
      1, 0.7f, false},
-    
-    // Quartal voicing: C-F-Bb (stacked 4ths) - common in modal jazz
-    {"sus", "Quartal",
-     {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f, 0.0f},
-     2, 0.8f, false},
 };
 
 constexpr int CHORD_TEMPLATE_COUNT = sizeof(CHORD_TEMPLATES) / sizeof(ChordTemplate);
@@ -271,13 +394,29 @@ constexpr int CHORD_TEMPLATE_COUNT = sizeof(CHORD_TEMPLATES) / sizeof(ChordTempl
 // ============================================================================
 
 /**
+ * Check if a template name matches any of the given names
+ */
+inline bool templateNameMatches(const char* name, const char* match)
+{
+    if (name == nullptr || match == nullptr) return false;
+    // Simple string compare
+    const char* a = name;
+    const char* b = match;
+    while (*a && *b) {
+        if (*a != *b) return false;
+        ++a; ++b;
+    }
+    return *a == *b;
+}
+
+/**
  * Find the best matching template using cosine similarity
  * 
  * @param shiftedChroma Input chroma vector, already shifted so potential root is at index 0
  * @param outScore Output: the similarity score
  * @return Index of best matching template, or -1 if none above threshold
  */
-inline int findBestTemplate(const float* shiftedChroma, float& outScore, float threshold = 0.6f)
+inline int findBestTemplate(const float* shiftedChroma, float& outScore, float threshold = 0.5f)
 {
     int bestIdx = -1;
     float bestScore = threshold;
