@@ -189,7 +189,7 @@ public:
         total_++;
         
         // Create detector for each test
-        ChordDetection::OptimizedChordDetector detector(false, ChordDetection::SlashChordMode::AUTO);
+        ChordDetection::OptimizedChordDetector detector(false, ChordDetection::SlashChordMode::Auto);
         
         // Detect chord
         auto result = detector.detectChord(tc.midiNotes);
