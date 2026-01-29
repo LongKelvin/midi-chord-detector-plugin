@@ -1,90 +1,127 @@
 # MIDI Chord Detector
 
-A real-time MIDI chord detection VST3 plugin with **advanced harmonic recognition** and **temporal reasoning**. Designed for jazz, live performance, practice, and composition.
+A real-time MIDI chord detection VST3 plugin with **pattern-based harmonic recognition** and **optimized scoring**. Designed for jazz, live performance, practice, and composition.
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Version](https://img.shields.io/badge/version-3.0.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![VST3](https://img.shields.io/badge/VST3-Instrument-green)
 
 ## Overview
 
-MIDI Chord Detector v2.0 uses a sophisticated **layered architecture** that treats chords as hypotheses evolving over time, not instant detections. The key principle: *"A wrong chord briefly is worse than a delayed correct chord."*
+MIDI Chord Detector v3.0 uses a **pattern-based detection algorithm** with optimized scoring for accurate chord identification. The algorithm matches input notes against 100+ chord patterns with intelligent inversion detection and slash chord support.
 
-The plugin analyzes MIDI input using temporal reasoning with a sliding memory window, multi-factor confidence scoring, and intelligent resolution rules to produce stable, musically-sensible chord names.
+The plugin analyzes MIDI input using pattern matching with weighted scoring, confidence calculation, and voicing classification to produce accurate, musically-sensible chord names.
 
 **Note:** This is a **VST3 Instrument**, not a MIDI FX plugin. The MIDI FX version is available in other branches.
 
 ## Features
 
 ### Core Capabilities
-- **Advanced harmonic recognition** - Jazz-capable detection with 24 chord types
-- **Temporal reasoning** - 200ms sliding memory window with exponential decay
-- **Multi-factor confidence scoring** - Weighted analysis of intervals, bass, stability, and complexity
-- **Hysteresis protection** - Prevents rapid flickering between similar chords
-- **Real-time safe** - No heap allocations in audio thread, fixed-size buffers
+- **100+ chord patterns** - Comprehensive coverage from triads to extended jazz voicings
+- **Pattern-based detection** - Fast matching algorithm with optimized scoring
+- **Accurate inversion detection** - 150pt bonus for root position, intelligent slash chord handling
+- **Confidence scoring** - Multi-factor weighted confidence calculation
+- **Voicing classification** - Identifies close, open, drop-2, drop-3, and rootless voicings
+- **Real-time safe** - No heap allocations in audio thread
 
 ### Technical Features
 - **Event-driven architecture** - Responds instantly to MIDI events (Note On/Off, Sustain Pedal)
 - **Sustain pedal support** - Respects CC64 for natural playing
-- **Rolled chord detection** - Captures arpeggiated chords via temporal memory
-- **Voice separation** - Intelligently separates bass, chord tones, and melody
+- **Slash chord modes** - Auto, Always, or Never show bass note indicators
 - **Clean UI** - Minimal, distraction-free chord display
 - **MIDI pass-through** - Forwards all MIDI to downstream instruments
 - **Zero latency** - No audio processing, pure MIDI analysis
 
-### Supported Chord Types (24 Total)
+### Supported Chord Types (100+ Patterns)
 
-**Tier 1 - MVP Jazz Chords (~80% of real jazz harmony):**
-- Major, Minor, Dominant 7th, Minor 7th, Major 7th
-- Minor 7♭5 (Half-diminished), Diminished 7th
+**Basic Triads:**
+- Major, Minor, Diminished, Augmented
+- Suspended (sus2, sus4)
 
-**Tier 2 - Extended Support:**
-- Diminished, Augmented, Augmented 7th
-- Minor/Major 7th, Dominant 7sus4
-- 6th chords (Major 6, Minor 6)
-- 9th chords (Dominant 9, Major 9, Minor 9)
-- Suspended (sus2, sus4, 7sus4)
-- Added tone chords (add9)
-- Alterations (7♯5, 7♭9)
+**7th Chords:**
+- Major 7th, Dominant 7th, Minor 7th, Minor/Major 7th
+- Diminished 7th, Half-diminished (m7♭5)
+- Augmented 7th, Dominant 7sus4
+
+**Extended Chords:**
+- 9th (Major 9, Dominant 9, Minor 9)
+- 11th (Major 11, Dominant 11, Minor 11)
+- 13th (Major 13, Dominant 13, Minor 13)
+
+**Altered Dominants:**
+- 7♭5, 7♯5, 7♭9, 7♯9
+- 7♯5♭9, 7♯5♯9, 7♯11
+- 13♭9, 13♯9, 7♭9♯11
+
+**Add Chords:**
+- add9, m(add9), add11, add13
+- 6, m6, 6/9, m6/9
+
+**Special:**
+- Power chords (5)
+- Quartal voicings
 
 ## Architecture
 
 ```
-┌─────────────────┐
-│  MidiNoteState  │  Active notes with timestamps
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│CandidateGenerator│  Enumerate all chord hypotheses
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ HarmonicMemory  │  Temporal reasoning with decay
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ConfidenceScorer │  Multi-factor scoring
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  ChordResolver  │  Final selection with rules
-└─────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    OptimizedChordDetector                       │
+├─────────────────────────────────────────────────────────────────┤
+│  Input: std::vector<int> MIDI notes                             │
+│                                                                 │
+│  ┌─────────────────┐                                            │
+│  │ Pitch Class     │  Convert MIDI → pitch classes (0-11)       │
+│  │ Extraction      │  Identify bass note and interval set       │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  ┌─────────────────┐                                            │
+│  │ Voicing         │  Classify: close, open, drop-2/3, rootless │
+│  │ Classification  │                                            │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  ┌─────────────────┐                                            │
+│  │ Pattern         │  Test all 12 roots × 100+ patterns         │
+│  │ Matching        │  Score each candidate chord                │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  ┌─────────────────┐                                            │
+│  │ Score           │  +150pt root position, +30pt required,     │
+│  │ Calculation     │  +20pt optional, -15pt missing required    │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  ┌─────────────────┐                                            │
+│  │ Best Candidate  │  Select highest score                      │
+│  │ Selection       │  Calculate confidence                      │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  Output: ChordCandidate { name, root, type, confidence, ... }   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Confidence Scoring Weights
+### Scoring Weights
 
-| Factor | Weight | Description |
+| Factor | Points | Description |
 |--------|--------|-------------|
-| Temporal Stability | 0.30 | How consistently the chord appears across memory frames |
-| Interval Coverage | 0.25 | How well notes match required chord intervals |
-| Missing Core Tones | 0.20 | Penalty for missing root, 3rd, or 7th |
-| Bass Alignment | 0.15 | Bonus when bass note matches chord root |
-| Complexity Penalty | 0.05 | Prefer simpler chords (Occam's razor) |
-| Velocity Weight | 0.05 | Louder notes contribute more |
+| Root Position Bonus | +150 | Bass note matches chord root |
+| Required Interval | +30 | Each required interval present |
+| Optional Interval | +20 | Each optional interval present |
+| Missing Required | -15 | Penalty for missing required intervals |
+| Voicing Type | ×1.0-1.2 | Bonus for valid voicing patterns |
+
+### Confidence Calculation
+
+```
+margin = (bestScore - secondBest) / bestScore
+absolute = score / maxPossible
+noteCount = notes.size() / 6.0
+
+confidence = 0.4 × margin + 0.4 × absolute + 0.2 × noteCount + exactBonus
+```
 
 ## Usage in DAW
 
@@ -194,46 +231,47 @@ These settings are optimized for typical keyboard playing and cannot currently b
 
 ## How It Works
 
-The plugin uses a **layered detection pipeline** with temporal reasoning:
+The plugin uses a **pattern-based detection algorithm** with optimized scoring:
 
 ### 1. Note State Tracking
-- Tracks all active notes with timestamps
+- Tracks all active notes
 - Respects sustain pedal (CC64)
-- Builds pitch class set for analysis
+- Converts MIDI notes to pitch classes (0-11)
 
-### 2. Candidate Generation
-- Tests each note as potential root
-- Evaluates against 24 chord formula definitions
-- Calculates formula match scores using interval importance weights
+### 2. Voicing Classification
+Analyzes note spacing to identify:
+- **Close voicing** - Notes within an octave
+- **Open voicing** - Notes spread across > 2 octaves
+- **Drop-2/Drop-3** - Jazz piano voicings with dropped notes
+- **Rootless** - Common jazz voicings without root
 
-### 3. Harmonic Memory
-- Maintains sliding 200ms window of recent frames
-- Applies exponential decay (older = less weight)
-- Reinforces consistently appearing candidates
-- Enables temporal stability calculation
+### 3. Pattern Matching
+- Tests each of 12 possible roots (C through B)
+- Evaluates against 100+ chord pattern definitions
+- Calculates match scores using weighted intervals
 
-### 4. Confidence Scoring
-Multi-factor weighted scoring:
-- **Temporal stability (30%)** - Consistency across memory frames
-- **Interval coverage (25%)** - How well notes match chord intervals
-- **Missing core tones (20%)** - Penalty for absent root/3rd/7th
-- **Bass alignment (15%)** - Bonus when bass = root
-- **Complexity penalty (5%)** - Prefer simpler chords
-- **Velocity weighting (5%)** - Louder notes matter more
+### 4. Scoring
+Point-based scoring system:
+- **+150 points** - Root position (bass = chord root)
+- **+30 points** - Each required interval present
+- **+20 points** - Each optional interval present
+- **-15 points** - Each missing required interval
+- **×1.0-1.2** - Voicing type multiplier
 
-### 5. Resolution
-- Applies hysteresis (prefer current chord if close)
-- Requires confidence delta > 0.05 to switch
-- Outputs stable, musically-sensible results
+### 5. Confidence Calculation
+Multi-factor weighted confidence:
+- **40% margin** - Score gap between best and second-best
+- **40% absolute** - Raw score as % of maximum
+- **20% note count** - More notes = higher confidence
+- **+0.1 bonus** - Exact interval match
 
 ## Known Limitations
 
-- **Jazz detection is Tier 1** - Handles ~80% of real jazz harmony; complex voicings/polychords may misidentify
+- **Jazz detection** - Handles most jazz harmony; highly complex polychords may misidentify
 - **Only tested with Cubase** - May have issues with other DAWs
 - **Windows only** - No macOS build currently available
 - **No user settings** - Configuration is hard-coded
 - **Basic UI** - Minimal display, no customization options
-- **Latency** - ~10-50ms detection delay for temporal stability (intentional design choice)
 
 ## Troubleshooting
 
@@ -280,7 +318,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 Contributions are welcome! Areas that need improvement:
 
-- **Tier 2+ chord formulas** - Add 11th, 13th, altered extensions
+- **Additional chord patterns** - Add more specialized voicings
 - **Scoring weight tuning** - Optimize weights based on real-world testing
 - **macOS support** - Cross-platform build
 - **User-configurable settings** - Expose engine parameters in UI
@@ -295,8 +333,8 @@ GitHub: [https://github.com/LongKelvin](https://github.com/LongKelvin)
 ## Acknowledgments
 
 - Built with [JUCE Framework](https://juce.com/)
-- Layered detection architecture with temporal reasoning
-- Chord formula system based on music theory interval analysis
+- Pattern-based detection algorithm with optimized scoring
+- Chord patterns based on music theory interval analysis
 - Inspired by the need for jazz-capable chord feedback in Cubase AI/Elements
 
 ---
