@@ -119,7 +119,7 @@ target_include_directories(MidiChordDetector
 juce_add_gui_app(MidiChordDetectorStandalone
     COMPANY_NAME "MusicProgrammings"
     PRODUCT_NAME "MIDI Chord Detector Standalone"
-    VERSION "2.0.0"
+    VERSION "3.0.0"
 )
 
 # Standalone source files

@@ -10,6 +10,7 @@
 */
 
 #include "MainComponent.h"
+#include "../Version.h"
 
 //==============================================================================
 MainComponent::MainComponent()
@@ -28,7 +29,7 @@ MainComponent::MainComponent()
     titleLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (titleLabel);
     
-    versionLabel.setText ("v2.0.0 - Standalone Debug Mode", juce::dontSendNotification);
+    versionLabel.setText (juce::String(MidiChordDetector::Version::VERSION_STRING_WITH_V) + " - Standalone Debug Mode", juce::dontSendNotification);
     versionLabel.setFont (juce::Font (14.0f, juce::Font::italic));
     versionLabel.setJustificationType (juce::Justification::centred);
     versionLabel.setColour (juce::Label::textColourId, juce::Colours::grey);
@@ -138,7 +139,7 @@ MainComponent::MainComponent()
     // Start the timer for UI updates
     startTimerHz (30); // 30 fps
     
-    addLogMessage ("=== MIDI Chord Detector v3.0.0 Started ===");
+    addLogMessage ("=== MIDI Chord Detector " + juce::String(MidiChordDetector::Version::VERSION_STRING_WITH_V) + " Started ===");
     addLogMessage ("Engine: Pattern-based detection with 100+ chord types");
 }
 
