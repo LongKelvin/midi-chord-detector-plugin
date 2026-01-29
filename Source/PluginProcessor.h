@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "core/ChordDetectorEngine.h"
+#include "chord_detection/api/JuceChordDetector.h"
 #include <atomic>
 #include <memory>
 
@@ -9,13 +9,13 @@
 /**
  * MidiChordDetectorAudioProcessor
  * 
- * VST3 MIDI Effect plugin processor
+ * VST3 MIDI Effect plugin processor using optimized pattern-based chord detection.
  * 
- * Uses the new layered chord detection architecture:
- * - CandidateGenerator: Enumerate chord possibilities
- * - HarmonicMemory: Temporal reasoning (rolling chords, arpeggios)
- * - ConfidenceScorer: Multi-factor scoring
- * - ChordResolver: Final chord selection
+ * The new algorithm:
+ * - Pattern-based detection with 100+ chord types
+ * - Optimized scoring for accurate inversion detection
+ * - Slash chord support with auto/always/never modes
+ * - Voicing classification (close, open, drop-2, drop-3, rootless)
  * 
  * Responsibilities:
  * - Parse MIDI input from host
@@ -72,10 +72,10 @@ public:
     // UI Thread Access
     
     /**
-     * Get the most recent resolved chord (safe for UI thread)
-     * Returns a copy of the current chord result
+     * Get the most recent detected chord (safe for UI thread)
+     * Returns the current ChordCandidate, may be nullptr if no chord detected
      */
-    ChordDetection::ResolvedChord getCurrentChord() const;
+    std::shared_ptr<ChordDetection::ChordCandidate> getCurrentChord() const;
     
     /**
      * Check if a new chord has been detected since last check
@@ -88,26 +88,29 @@ public:
     bool hasMidiActivity() const;
     
     /**
-     * Access engine configuration (for potential parameter exposure)
+     * Set slash chord mode
      */
-    ChordDetection::EngineConfig getEngineConfig() const;
-    void setEngineConfig(const ChordDetection::EngineConfig& config);
+    void setSlashChordMode(ChordDetection::SlashChordMode mode);
+    
+    /**
+     * Set minimum notes for detection
+     */
+    void setMinimumNotes(int minNotes);
 
 private:
     //==============================================================================
-    // Audio thread members
-    ChordDetection::ChordDetectorEngine chordEngine_;
+    // Chord detector using new pattern-based algorithm
+    ChordDetection::JuceChordDetector chordDetector_;
     
     double sampleRate_;
-    double currentTimeMs_;
     
     // Settings
     bool passMidiThrough_;
     
     // Cross-thread communication (lock-free)
     // Audio thread writes, UI thread reads
-    std::atomic<ChordDetection::ResolvedChord*> currentChord_;
-    ChordDetection::ResolvedChord chordBuffer_[2];  // Double buffer
+    std::atomic<ChordDetection::ChordCandidate*> currentChordPtr_;
+    std::shared_ptr<ChordDetection::ChordCandidate> chordBuffer_[2];  // Double buffer
     int chordBufferIndex_;
     
     mutable std::atomic<bool> newChordAvailable_;  // mutable for hasNewChord() const
@@ -115,8 +118,7 @@ private:
     
     // Helper methods
     void processMidiMessage(const juce::MidiMessage& message);
-    void updateChordDetection();
-    void publishChordResult(const ChordDetection::ResolvedChord& chord);
+    void publishChordResult(const std::shared_ptr<ChordDetection::ChordCandidate>& chord);
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiChordDetectorAudioProcessor)
