@@ -7,7 +7,7 @@ MidiChordDetectorAudioProcessor::MidiChordDetectorAudioProcessor()
                        // VST3 Instrument requires audio output bus (outputs silence)
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                        )
-    , chordDetector_(ChordDetection::SlashChordMode::AUTO)
+    , chordDetector_(ChordDetection::SlashChordMode::Auto)
     , sampleRate_(44100.0)
     , passMidiThrough_(true)
     , chordBufferIndex_(0)
@@ -22,7 +22,7 @@ MidiChordDetectorAudioProcessor::MidiChordDetectorAudioProcessor()
     
     // Configure detector with defaults
     chordDetector_.setMinimumNotes(2);
-    chordDetector_.setSlashChordMode(ChordDetection::SlashChordMode::AUTO);
+    chordDetector_.setSlashChordMode(ChordDetection::SlashChordMode::Auto);
 }
 
 MidiChordDetectorAudioProcessor::~MidiChordDetectorAudioProcessor()
