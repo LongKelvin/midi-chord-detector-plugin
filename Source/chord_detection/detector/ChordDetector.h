@@ -1,159 +1,166 @@
 // ChordDetector.h
-// Optimized MIDI Chord Detector for JUCE
-// C++ implementation maintaining Python algorithm logic
+// Pattern-based MIDI Chord Detection Engine
+// 
+// Main detector class that orchestrates all chord detection modules.
+// This is a slim wrapper that delegates to specialized components.
 
 #pragma once
+
+// Include all module headers for convenience
+#include "ChordTypes.h"
+#include "ChordPattern.h"
+#include "ChordCandidate.h"
+#include "NoteUtils.h"
+#include "ChordPatterns.h"
+#include "ChordScoring.h"
+#include "VoicingAnalyzer.h"
+#include "ChordFormatter.h"
 
 #include <vector>
 #include <string>
 #include <map>
-#include <set>
-#include <tuple>
 #include <memory>
-#include <algorithm>
-#include <cmath>
 
 namespace ChordDetection {
 
-// ============================================================================
-// ENUMS
-// ============================================================================
-
-enum class VoicingType {
-    CLOSE,
-    OPEN,
-    ROOTLESS,
-    DROP_2,
-    DROP_3,
-    UNKNOWN
-};
-
-enum class SlashChordMode {
-    AUTO,    // Smart slash/inversion
-    ALWAYS,  // Always show /bass
-    NEVER    // Traditional inversions
-};
-
-// ============================================================================
-// STRUCTS
-// ============================================================================
-
-struct ChordPattern {
-    std::vector<int> intervals;
-    int baseScore;
-    std::vector<int> required;
-    std::vector<int> optional;
-    std::vector<int> importantIntervals;
-    std::string display;
-    std::string quality;
-    
-    ChordPattern() : baseScore(100) {}
-    
-    ChordPattern(const std::vector<int>& intervals_,
-                 int baseScore_,
-                 const std::vector<int>& required_,
-                 const std::vector<int>& optional_,
-                 const std::vector<int>& important_,
-                 const std::string& display_,
-                 const std::string& quality_)
-        : intervals(intervals_)
-        , baseScore(baseScore_)
-        , required(required_)
-        , optional(optional_)
-        , importantIntervals(important_)
-        , display(display_)
-        , quality(quality_)
-    {}
-};
-
-struct ChordCandidate {
-    std::string chordName;
-    int root;
-    std::string rootName;
-    std::string chordType;
-    std::vector<int> pattern;
-    std::vector<int> intervals;
-    float score;
-    float confidence;
-    std::string position;
-    VoicingType voicingType;
-    std::vector<std::string> degrees;
-    std::vector<std::string> noteNames;
-    std::vector<int> noteNumbers;
-    std::vector<int> pitchClasses;
-    
-    ChordCandidate()
-        : root(0)
-        , score(0.0f)
-        , confidence(0.0f)
-        , voicingType(VoicingType::UNKNOWN)
-    {}
-};
-
-// ============================================================================
-// CHORD DETECTOR CLASS
-// ============================================================================
-
-class OptimizedChordDetector {
+/**
+ * Pattern-based chord detection engine.
+ * 
+ * This class is the main entry point for chord detection. It orchestrates
+ * the various detection modules:
+ * - ChordPatterns: Pattern database initialization
+ * - ChordScoring: Candidate scoring algorithms
+ * - VoicingAnalyzer: Voicing classification
+ * - ChordFormatter: Output formatting
+ * - NoteUtils: Note name and conversion utilities
+ * 
+ * Thread-safety: NOT thread-safe. Use separate instances per thread or
+ * synchronize externally.
+ * 
+ * Example usage:
+ * @code
+ *     ChordDetector detector;
+ *     auto result = detector.detectChord({60, 64, 67});  // C major
+ *     if (result) {
+ *         std::cout << result->chordName << std::endl;
+ *     }
+ * @endcode
+ */
+class ChordDetector {
 public:
-    OptimizedChordDetector(bool enableContext = false, 
-                          SlashChordMode slashMode = SlashChordMode::AUTO);
-    ~OptimizedChordDetector();
+    // ========================================================================
+    // CONSTRUCTION
+    // ========================================================================
     
-    // Main detection method
-    std::shared_ptr<ChordCandidate> detectChord(const std::vector<int>& midiNotes);
+    /**
+     * Construct a chord detector.
+     * 
+     * @param enableContext Enable harmonic context tracking (default: false)
+     * @param slashMode Slash chord display mode (default: Auto)
+     */
+    explicit ChordDetector(bool enableContext = false, 
+                          SlashChordMode slashMode = SlashChordMode::Auto);
     
-    // Helper methods
-    int parseNoteInput(const std::string& noteStr);
-    std::string getNoteName(int pitchClass, bool preferSharp = true) const;
-    std::string formatOutput(const std::shared_ptr<ChordCandidate>& result) const;
+    ~ChordDetector();
     
-    // Configuration
-    void setSlashChordMode(SlashChordMode mode) { slashChordMode_ = mode; }
-    void setEnableContext(bool enable) { enableContext_ = enable; }
+    // Non-copyable (pattern initialization is expensive)
+    ChordDetector(const ChordDetector&) = delete;
+    ChordDetector& operator=(const ChordDetector&) = delete;
     
-    // Access chord patterns (for quality lookup)
-    const std::map<std::string, ChordPattern>& getChordPatterns() const { return chordPatterns_; }
+    // Movable
+    ChordDetector(ChordDetector&&) noexcept = default;
+    ChordDetector& operator=(ChordDetector&&) noexcept = default;
+    
+    // ========================================================================
+    // DETECTION
+    // ========================================================================
+    
+    /**
+     * Detect chord from MIDI note numbers.
+     * 
+     * @param midiNotes Vector of MIDI note numbers (0-127)
+     * @return Detected chord or nullptr if no valid chord found
+     */
+    [[nodiscard]] std::shared_ptr<ChordCandidate> detectChord(
+        const std::vector<int>& midiNotes);
+    
+    // ========================================================================
+    // CONFIGURATION
+    // ========================================================================
+    
+    void setSlashChordMode(SlashChordMode mode) noexcept { slashChordMode_ = mode; }
+    [[nodiscard]] SlashChordMode getSlashChordMode() const noexcept { return slashChordMode_; }
+    
+    void setEnableContext(bool enable) noexcept { enableContext_ = enable; }
+    [[nodiscard]] bool isContextEnabled() const noexcept { return enableContext_; }
+    
+    // ========================================================================
+    // UTILITIES
+    // ========================================================================
+    
+    /**
+     * Parse note string to MIDI number (e.g., "C4" -> 60)
+     * @throws std::runtime_error on invalid input
+     */
+    [[nodiscard]] static int parseNoteInput(const std::string& noteStr) {
+        return NoteUtils::parseNoteString(noteStr);
+    }
+    
+    /**
+     * Get note name for pitch class
+     */
+    [[nodiscard]] static std::string getNoteName(int pitchClass, bool preferSharp = true) {
+        return NoteUtils::getNoteName(pitchClass, preferSharp);
+    }
+    
+    /**
+     * Format detection result for display/logging
+     */
+    [[nodiscard]] std::string formatOutput(const std::shared_ptr<ChordCandidate>& result) const {
+        return ChordFormatter::formatDetailed(result, chordPatterns_);
+    }
+    
+    /**
+     * Access chord patterns (for quality lookup)
+     */
+    [[nodiscard]] const std::map<std::string, ChordPattern>& getChordPatterns() const noexcept {
+        return chordPatterns_;
+    }
+    
+    /**
+     * Clear chord history (context tracking)
+     */
+    void clearHistory() noexcept { chordHistory_.clear(); }
     
 private:
-    // Internal methods
-    void initializeChordPatterns();
-    void buildIntervalIndex();
+    // ========================================================================
+    // DETECTION INTERNALS
+    // ========================================================================
     
-    int midiToPitchClass(int midi) const;
-    VoicingType classifyVoicing(const std::vector<int>& midiNotes) const;
-    
-    float computeScore(const std::vector<int>& intervals,
-                      const ChordPattern& pattern,
-                      int bassPitchClass,
-                      int potentialRoot,
-                      VoicingType voicingType) const;
-    
-    float computeConfidence(float bestScore,
-                           float secondBestScore,
-                           int noteCount,
-                           bool exactMatch) const;
-    
-    std::shared_ptr<ChordCandidate> resolveAmbiguity(
+    [[nodiscard]] std::shared_ptr<ChordCandidate> resolveAmbiguity(
         const std::vector<std::shared_ptr<ChordCandidate>>& candidates,
         int bassPitchClass) const;
     
-    std::string replaceRoot(const std::string& pattern, 
-                           const std::string& rootName) const;
+    // ========================================================================
+    // MEMBER DATA
+    // ========================================================================
     
-    // Member variables
     bool enableContext_;
     SlashChordMode slashChordMode_;
     
+    // Pattern database
     std::map<std::string, ChordPattern> chordPatterns_;
     std::map<std::vector<int>, std::vector<std::string>> intervalIndex_;
-    std::vector<std::shared_ptr<ChordCandidate>> chordHistory_;
     
-    // Note names
-    static const std::vector<std::string> NOTE_NAMES;
-    static const std::vector<std::string> NOTE_NAMES_FLAT;
-    static const std::map<std::string, std::string> ENHARMONIC_MAP;
-    static const std::map<int, std::string> DEGREE_MAP;
+    // Context tracking (optional)
+    std::vector<std::shared_ptr<ChordCandidate>> chordHistory_;
 };
+
+// ============================================================================
+// BACKWARD COMPATIBILITY ALIAS
+// ============================================================================
+
+// Alias for code that used OptimizedChordDetector
+using OptimizedChordDetector = ChordDetector;
 
 } // namespace ChordDetection
