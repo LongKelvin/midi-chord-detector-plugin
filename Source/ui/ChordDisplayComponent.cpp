@@ -89,7 +89,7 @@ void ChordDisplayComponent::resized()
     // Layout is handled in paint()
 }
 
-void ChordDisplayComponent::setChord(const ChordDetection::ResolvedChord& chord)
+void ChordDisplayComponent::setChord(const std::shared_ptr<ChordDetection::ChordCandidate>& chord)
 {
     currentChord_ = chord;
     updateDisplayStrings();
@@ -98,7 +98,7 @@ void ChordDisplayComponent::setChord(const ChordDetection::ResolvedChord& chord)
 
 void ChordDisplayComponent::clearChord()
 {
-    currentChord_ = ChordDetection::ResolvedChord();
+    currentChord_ = nullptr;
     updateDisplayStrings();
     repaint();
 }
@@ -114,7 +114,7 @@ void ChordDisplayComponent::setMidiActivity(bool active)
 
 void ChordDisplayComponent::updateDisplayStrings()
 {
-    if (!currentChord_.isValid())
+    if (!currentChord_)
     {
         chordNameString_ = "N.C.";
         descriptionString_ = "No Chord";
@@ -123,30 +123,21 @@ void ChordDisplayComponent::updateDisplayStrings()
         return;
     }
     
-    // Chord name (already built in ResolvedChord)
-    chordNameString_ = juce::String(currentChord_.chordName);
+    // Chord name
+    chordNameString_ = juce::String(currentChord_->chordName);
     
-    // Description
-    descriptionString_ = juce::String(currentChord_.qualityName);
+    // Quality description - capitalize first letter
+    std::string quality = currentChord_->chordType;
+    if (!quality.empty())
+    {
+        quality[0] = static_cast<char>(std::toupper(quality[0]));
+    }
+    descriptionString_ = juce::String(quality);
     
-    // Inversion
-    if (currentChord_.isSlashChord)
-    {
-        inversionString_ = "Slash Chord";
-    }
-    else
-    {
-        switch (currentChord_.inversionType)
-        {
-            case 0: inversionString_ = "Root Position"; break;
-            case 1: inversionString_ = "1st Inversion"; break;
-            case 2: inversionString_ = "2nd Inversion"; break;
-            case 3: inversionString_ = "3rd Inversion"; break;
-            default: inversionString_ = ""; break;
-        }
-    }
+    // Position/inversion
+    inversionString_ = juce::String(currentChord_->position);
     
     // Confidence
-    int confidencePercent = static_cast<int>(currentChord_.confidence * 100.0f);
+    int confidencePercent = static_cast<int>(currentChord_->confidence * 100.0f);
     confidenceString_ = juce::String("Confidence: ") + juce::String(confidencePercent) + "%";
 }
