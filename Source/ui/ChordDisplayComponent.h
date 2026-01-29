@@ -1,15 +1,16 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "core/ChordCandidate.h"
+#include "../chord_detection/detector/ChordDetector.h"
+#include <memory>
 
 /**
  * ChordDisplayComponent - Displays detected chord information
  * 
  * Shows:
  * - Large chord name (e.g., "Cmaj7/E")
- * - Chord description ("Major 7th")
- * - Inversion type
+ * - Chord quality ("major", "dominant", etc.)
+ * - Position/inversion type
  * - Confidence score
  * 
  * Design:
@@ -33,7 +34,7 @@ public:
      * Update the displayed chord
      * Call from UI thread when new chord is available
      */
-    void setChord(const ChordDetection::ChordCandidate& chord);
+    void setChord(const std::shared_ptr<ChordDetection::ChordCandidate>& chord);
     
     /**
      * Clear the display (show "N.C.")
@@ -41,7 +42,7 @@ public:
     void clearChord();
 
 private:
-    ChordDetection::ChordCandidate currentChord_;
+    std::shared_ptr<ChordDetection::ChordCandidate> currentChord_;
     
     juce::Font chordNameFont_;
     juce::Font detailFont_;
