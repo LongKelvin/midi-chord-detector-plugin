@@ -13,13 +13,13 @@
 
 //==============================================================================
 MainComponent::MainComponent()
-    : chordDetector(ChordDetection::SlashChordMode::AUTO)
+    : chordDetector(ChordDetection::SlashChordMode::Auto)
 {
     setSize (800, 700);
     
     // Configure the chord detector with defaults
     chordDetector.setMinimumNotes(2);
-    chordDetector.setSlashChordMode(ChordDetection::SlashChordMode::AUTO);
+    chordDetector.setSlashChordMode(ChordDetection::SlashChordMode::Auto);
     
     //==========================================================================
     // Title section
