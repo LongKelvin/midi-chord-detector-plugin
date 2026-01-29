@@ -5,6 +5,8 @@
     
     Main component for the standalone MIDI Chord Detector application.
     Provides MIDI device selection, real-time chord display, and debug logging.
+    
+    Uses the new optimized pattern-based chord detection algorithm.
 
   ==============================================================================
 */
@@ -14,10 +16,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_gui_extra/juce_gui_extra.h>
-#include "../core/ChordDetectorEngine.h"
-#include "../core/MidiNoteState.h"
-
-using namespace ChordDetection;
+#include "../chord_detection/api/JuceChordDetector.h"
 
 //==============================================================================
 class MainComponent : public juce::Component,
@@ -44,7 +43,7 @@ private:
     
     // Debug logging
     void addLogMessage (const juce::String& message);
-    void logChordDetection (const ResolvedChord& chord);
+    void logChordDetection (const std::shared_ptr<ChordDetection::ChordCandidate>& chord);
     void logMidiMessage (const juce::MidiMessage& message);
     
     // Format helpers
@@ -52,9 +51,9 @@ private:
     juce::String getActiveNotesString() const;
     
     //==============================================================================
-    // Core engine
-    ChordDetectorEngine chordEngine;
-    ResolvedChord currentChord;
+    // Core engine - using new pattern-based detection
+    ChordDetection::JuceChordDetector chordDetector;
+    std::shared_ptr<ChordDetection::ChordCandidate> currentChord;
     std::atomic<bool> chordUpdated { false };
     
     // MIDI

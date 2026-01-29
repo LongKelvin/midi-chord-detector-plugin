@@ -4,26 +4,22 @@
     MainComponent.cpp
     
     Main component implementation for the standalone MIDI Chord Detector.
+    Uses the new optimized pattern-based chord detection algorithm.
 
   ==============================================================================
 */
 
 #include "MainComponent.h"
 
-using namespace ChordDetection;
-
 //==============================================================================
 MainComponent::MainComponent()
+    : chordDetector(ChordDetection::SlashChordMode::AUTO)
 {
     setSize (800, 700);
     
-    // Initialize the chord engine
-    EngineConfig config;
-    config.minimumNotes = 2;
-    config.memoryWindowMs = 200.0;
-    config.decayHalfLifeMs = 100.0;
-    config.minimumConfidence = 0.45f;
-    chordEngine.setConfig (config);
+    // Configure the chord detector with defaults
+    chordDetector.setMinimumNotes(2);
+    chordDetector.setSlashChordMode(ChordDetection::SlashChordMode::AUTO);
     
     //==========================================================================
     // Title section
@@ -142,8 +138,8 @@ MainComponent::MainComponent()
     // Start the timer for UI updates
     startTimerHz (30); // 30 fps
     
-    addLogMessage ("=== MIDI Chord Detector v2.0.0 Started ===");
-    addLogMessage ("Engine: memoryWindow=200ms, decayHalfLife=100ms, minConfidence=0.45");
+    addLogMessage ("=== MIDI Chord Detector v3.0.0 Started ===");
+    addLogMessage ("Engine: Pattern-based detection with 100+ chord types");
 }
 
 MainComponent::~MainComponent()
@@ -225,29 +221,32 @@ void MainComponent::timerCallback()
     if (chordUpdated.exchange (false))
     {
         // Update chord display
-        ResolvedChord chord;
+        std::shared_ptr<ChordDetection::ChordCandidate> chord;
         {
             juce::ScopedLock sl (midiLock);
             chord = currentChord;
         }
         
-        if (chord.isValid())
+        if (chord)
         {
-            // Use the pre-built chord name
-            static const char* rootNames[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-            
-            juce::String chordName = juce::String (chord.chordName);
+            juce::String chordName = juce::String (chord->chordName);
             
             chordNameLabel.setText (chordName, juce::dontSendNotification);
             chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::cyan);
             
-            confidenceLabel.setText ("Confidence: " + juce::String (chord.confidence * 100.0f, 1) + "%", 
+            confidenceLabel.setText ("Confidence: " + juce::String (chord->confidence * 100.0f, 1) + "%", 
                                      juce::dontSendNotification);
             
-            if (chord.bassPitchClass >= 0)
-                bassNoteLabel.setText ("Bass: " + juce::String (rootNames[chord.bassPitchClass % 12]), juce::dontSendNotification);
+            if (!chord->pitchClasses.empty())
+            {
+                static const char* rootNames[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+                int bassPC = chord->pitchClasses[0];
+                bassNoteLabel.setText ("Bass: " + juce::String (rootNames[bassPC % 12]), juce::dontSendNotification);
+            }
             else
+            {
                 bassNoteLabel.setText ("Bass: --", juce::dontSendNotification);
+            }
         }
         else
         {
@@ -261,18 +260,20 @@ void MainComponent::timerCallback()
         activeNotesLabel.setText (getActiveNotesString(), juce::dontSendNotification);
         
         // Update pitch classes
-        auto pitchClasses = chordEngine.getNoteState().getPitchClassSet();
+        auto notes = chordDetector.getCurrentNotes();
+        std::set<int> pitchClassSet;
+        for (int note : notes)
+        {
+            pitchClassSet.insert(note % 12);
+        }
+        
         juce::String pcStr = "Pitch Classes: {";
         bool first = true;
-        for (int i = 0; i < 12; i++)
+        for (int pc : pitchClassSet)
         {
-            if (pitchClasses.test(i))
-            {
-                if (!first) pcStr += ", ";
-                static const char* pcNames[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11" };
-                pcStr += pcNames[i];
-                first = false;
-            }
+            if (!first) pcStr += ", ";
+            pcStr += juce::String(pc);
+            first = false;
         }
         pcStr += "}";
         pitchClassLabel.setText (pcStr, juce::dontSendNotification);
@@ -282,35 +283,36 @@ void MainComponent::timerCallback()
 //==============================================================================
 void MainComponent::handleIncomingMidiMessage (juce::MidiInput* /*source*/, const juce::MidiMessage& message)
 {
-    double timestamp = juce::Time::getMillisecondCounterHiRes();
-    
     // Log MIDI message
     if (isMidiLoggingEnabled)
     {
         logMidiMessage (message);
     }
     
-    // Process the message through the chord engine
+    // Process the message through the chord detector
     {
         juce::ScopedLock sl (midiLock);
         
         if (message.isNoteOn())
         {
-            chordEngine.noteOn (message.getNoteNumber(), message.getVelocity(), timestamp);
+            chordDetector.addNote (message.getNoteNumber());
         }
         else if (message.isNoteOff())
         {
-            chordEngine.noteOff (message.getNoteNumber(), timestamp);
+            chordDetector.removeNote (message.getNoteNumber());
         }
-        else if (message.isController() && message.getControllerNumber() == 64)
+        else if (message.isController() && message.getControllerNumber() == 123)
         {
-            // Sustain pedal
-            bool isDown = message.getControllerValue() >= 64;
-            chordEngine.setSustainPedal (isDown, timestamp);
+            // All notes off
+            chordDetector.clearNotes();
+        }
+        else if (message.isAllNotesOff() || message.isAllSoundOff())
+        {
+            chordDetector.clearNotes();
         }
         
-        // Detect chord
-        currentChord = chordEngine.detectChord (timestamp);
+        // Get current chord
+        currentChord = chordDetector.getCurrentChord();
     }
     
     // Log chord detection
@@ -444,14 +446,14 @@ void MainComponent::addLogMessage (const juce::String& message)
     });
 }
 
-void MainComponent::logChordDetection (const ResolvedChord& chord)
+void MainComponent::logChordDetection (const std::shared_ptr<ChordDetection::ChordCandidate>& chord)
 {
     juce::String msg;
     
-    if (chord.isValid())
+    if (chord)
     {
-        msg = "CHORD: " + juce::String (chord.chordName);
-        msg += " (confidence=" + juce::String (chord.confidence * 100.0f, 1) + "%)";
+        msg = "CHORD: " + juce::String (chord->chordName);
+        msg += " (confidence=" + juce::String (chord->confidence * 100.0f, 1) + "%)";
     }
     else
     {
@@ -510,20 +512,16 @@ juce::String MainComponent::noteNumberToName (int noteNumber) const
 
 juce::String MainComponent::getActiveNotesString() const
 {
-    const auto& noteState = chordEngine.getNoteState();
+    auto notes = chordDetector.getCurrentNotes();
     
-    std::array<ActiveNote, 32> activeNotes;
-    int count = noteState.getActiveNotesDetailed (activeNotes.data(), 32);
-    
-    if (count == 0)
+    if (notes.empty())
         return "None";
     
     juce::String result;
-    for (int i = 0; i < count; i++)
+    for (size_t i = 0; i < notes.size(); i++)
     {
         if (i > 0) result += ", ";
-        result += noteNumberToName (activeNotes[i].midiNote);
-        result += "(" + juce::String (static_cast<int>(activeNotes[i].velocity * 127.0f)) + ")";
+        result += noteNumberToName (notes[i]);
     }
     
     return result;
