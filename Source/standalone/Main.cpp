@@ -12,6 +12,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "MainComponent.h"
+#include "../Version.h"
 
 //==============================================================================
 class MidiChordDetectorStandaloneApp : public juce::JUCEApplication
@@ -20,7 +21,7 @@ public:
     MidiChordDetectorStandaloneApp() {}
 
     const juce::String getApplicationName() override       { return "MIDI Chord Detector"; }
-    const juce::String getApplicationVersion() override    { return "2.0.0"; }
+    const juce::String getApplicationVersion() override    { return MidiChordDetector::Version::VERSION_STRING; }
     bool moreThanOneInstanceAllowed() override             { return true; }
 
     //==============================================================================
