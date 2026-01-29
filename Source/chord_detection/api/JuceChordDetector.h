@@ -39,7 +39,7 @@ namespace ChordDetection {
  */
 class JuceChordDetector {
 public:
-    JuceChordDetector(SlashChordMode mode = SlashChordMode::AUTO)
+    explicit JuceChordDetector(SlashChordMode mode = SlashChordMode::Auto)
         : detector_(false, mode)
     {}
     
@@ -118,7 +118,7 @@ public:
     /**
      * Get the currently detected chord (returns nullptr if no valid chord)
      */
-    std::shared_ptr<ChordCandidate> getCurrentChord() const {
+    [[nodiscard]] std::shared_ptr<ChordCandidate> getCurrentChord() const noexcept {
         return currentChord_;
     }
     
@@ -132,21 +132,21 @@ public:
     /**
      * Get currently held MIDI note numbers
      */
-    std::vector<int> getCurrentNotes() const {
+    [[nodiscard]] std::vector<int> getCurrentNotes() const {
         return std::vector<int>(currentNotes_.begin(), currentNotes_.end());
     }
     
     /**
      * Check if any notes are currently held
      */
-    bool hasNotes() const {
+    [[nodiscard]] bool hasNotes() const noexcept {
         return !currentNotes_.empty();
     }
     
     /**
      * Get number of currently held notes
      */
-    int getNoteCount() const {
+    [[nodiscard]] int getNoteCount() const noexcept {
         return static_cast<int>(currentNotes_.size());
     }
     
@@ -157,7 +157,7 @@ public:
     /**
      * Get chord name as JUCE String
      */
-    juce::String getChordName() const {
+    [[nodiscard]] juce::String getChordName() const {
         if (currentChord_) {
             return juce::String(currentChord_->chordName);
         }
@@ -167,7 +167,7 @@ public:
     /**
      * Get root note name as JUCE String
      */
-    juce::String getRootName() const {
+    [[nodiscard]] juce::String getRootName() const {
         if (currentChord_) {
             return juce::String(currentChord_->rootName);
         }
@@ -177,7 +177,7 @@ public:
     /**
      * Get chord quality (major, minor, dominant, etc.)
      */
-    juce::String getQuality() const {
+    [[nodiscard]] juce::String getQuality() const {
         if (currentChord_) {
             auto& patterns = detector_.getChordPatterns();
             auto it = patterns.find(currentChord_->chordType);
@@ -191,7 +191,7 @@ public:
     /**
      * Get confidence score (0.0 to 1.0)
      */
-    float getConfidence() const {
+    [[nodiscard]] float getConfidence() const noexcept {
         if (currentChord_) {
             return currentChord_->confidence;
         }
@@ -201,7 +201,7 @@ public:
     /**
      * Get formatted output as JUCE String
      */
-    juce::String getFormattedOutput() const {
+    [[nodiscard]] juce::String getFormattedOutput() const {
         return juce::String(detector_.formatOutput(currentChord_));
     }
     
