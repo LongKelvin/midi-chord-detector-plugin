@@ -72,14 +72,7 @@ target_sources(MidiChordDetector
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
-        Source/core/MidiNoteState.cpp
-        Source/core/TimeWindowBuffer.cpp
-        Source/core/ChordDetector.cpp
-        Source/core/CandidateGenerator.cpp
-        Source/core/HarmonicMemory.cpp
-        Source/core/ConfidenceScorer.cpp
-        Source/core/ChordResolver.cpp
-        Source/core/ChordDetectorEngine.cpp
+        Source/chord_detection/detector/ChordDetector.cpp
         Source/ui/ChordDisplayComponent.cpp
 )
 
@@ -127,15 +120,8 @@ target_sources(MidiChordDetectorStandalone
     PRIVATE
         Source/standalone/Main.cpp
         Source/standalone/MainComponent.cpp
-        # Core engine (shared with plugin)
-        Source/core/MidiNoteState.cpp
-        Source/core/TimeWindowBuffer.cpp
-        Source/core/ChordDetector.cpp
-        Source/core/CandidateGenerator.cpp
-        Source/core/HarmonicMemory.cpp
-        Source/core/ConfidenceScorer.cpp
-        Source/core/ChordResolver.cpp
-        Source/core/ChordDetectorEngine.cpp
+        # Core chord detection (new pattern-based algorithm)
+        Source/chord_detection/detector/ChordDetector.cpp
 )
 
 # Compile definitions for standalone
