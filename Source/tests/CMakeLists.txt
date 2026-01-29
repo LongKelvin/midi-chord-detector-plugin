@@ -1,5 +1,5 @@
 # =============================================================================
-# CMakeLists.txt for H-WCTM Chord Detection Tests
+# CMakeLists.txt for Pattern-Based Chord Detection Tests
 # =============================================================================
 # Features:
 # - Automatic test generation from JSON using Python
@@ -15,17 +15,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # =============================================================================
-# Core Source Files (Standalone - No JUCE Dependencies)
+# Chord Detection Source Files (Standalone - No JUCE Dependencies)
 # =============================================================================
-set(CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../core")
+set(CHORD_DETECTION_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../chord_detection")
 
-set(CORE_SOURCES
-    ${CORE_DIR}/MidiNoteState.cpp
-    ${CORE_DIR}/CandidateGenerator.cpp
-    ${CORE_DIR}/ChordDetectorEngine.cpp
-    ${CORE_DIR}/ChordResolver.cpp
-    ${CORE_DIR}/ConfidenceScorer.cpp
-    ${CORE_DIR}/HarmonicMemory.cpp
+set(CHORD_DETECTION_SOURCES
+    ${CHORD_DETECTION_DIR}/detector/ChordDetector.cpp
 )
 
 # =============================================================================
@@ -60,7 +55,7 @@ if(Python3_FOUND AND EXISTS "${JSON_TEST_FILE}" AND EXISTS "${GENERATOR_SCRIPT}"
     add_custom_target(GenerateTests DEPENDS ${GENERATED_TESTS_FILE})
     
     set(USE_GENERATED_TESTS TRUE)
-    message(STATUS "JSON test generation: ENABLED (168 additional tests)")
+    message(STATUS "JSON test generation: ENABLED")
 else()
     if(NOT Python3_FOUND)
         message(WARNING "Python 3 not found - JSON test generation DISABLED")
@@ -71,7 +66,7 @@ else()
     endif()
     
     set(USE_GENERATED_TESTS FALSE)
-    message(STATUS "JSON test generation: DISABLED (manual tests only - 20 tests)")
+    message(STATUS "JSON test generation: DISABLED (manual tests only)")
 endif()
 
 # =============================================================================
@@ -80,14 +75,14 @@ endif()
 
 # Include directories
 include_directories(
-    ${CORE_DIR}
+    ${CHORD_DETECTION_DIR}/detector
     ${CMAKE_CURRENT_BINARY_DIR}  # For generated header
 )
 
 # Create test executable
 add_executable(ChordDetectionTests
     ChordDetectionTests.cpp
-    ${CORE_SOURCES}
+    ${CHORD_DETECTION_SOURCES}
 )
 
 # Link generated tests if available
@@ -133,18 +128,18 @@ set_target_properties(ChordDetectionTests PROPERTIES
 
 message(STATUS "")
 message(STATUS "========================================")
-message(STATUS "Chord Detection Tests Configuration")
+message(STATUS "Pattern-Based Chord Detection Tests")
 message(STATUS "========================================")
 message(STATUS "Build Type:        ${CMAKE_BUILD_TYPE}")
 message(STATUS "C++ Standard:      C++${CMAKE_CXX_STANDARD}")
 message(STATUS "Python 3:          ${Python3_FOUND}")
 message(STATUS "JSON Tests:        ${USE_GENERATED_TESTS}")
-message(STATUS "Manual Tests:      20")
+message(STATUS "Manual Tests:      22")
 if(USE_GENERATED_TESTS)
     message(STATUS "Generated Tests:   168")
-    message(STATUS "Total Tests:       188")
+    message(STATUS "Total Tests:       190")
 else()
-    message(STATUS "Total Tests:       20")
+    message(STATUS "Total Tests:       22")
 endif()
 message(STATUS "Output Directory:  ${CMAKE_BINARY_DIR}")
 message(STATUS "========================================")
