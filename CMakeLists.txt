@@ -72,7 +72,14 @@ target_sources(MidiChordDetector
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
+        # Chord detection modules
         Source/chord_detection/detector/ChordDetector.cpp
+        Source/chord_detection/detector/ChordPatterns.cpp
+        Source/chord_detection/detector/ChordScoring.cpp
+        Source/chord_detection/detector/VoicingAnalyzer.cpp
+        Source/chord_detection/detector/ChordFormatter.cpp
+        Source/chord_detection/detector/NoteUtils.cpp
+        # UI components
         Source/ui/ChordDisplayComponent.cpp
 )
 
@@ -120,8 +127,13 @@ target_sources(MidiChordDetectorStandalone
     PRIVATE
         Source/standalone/Main.cpp
         Source/standalone/MainComponent.cpp
-        # Core chord detection (new pattern-based algorithm)
+        # Chord detection modules
         Source/chord_detection/detector/ChordDetector.cpp
+        Source/chord_detection/detector/ChordPatterns.cpp
+        Source/chord_detection/detector/ChordScoring.cpp
+        Source/chord_detection/detector/VoicingAnalyzer.cpp
+        Source/chord_detection/detector/ChordFormatter.cpp
+        Source/chord_detection/detector/NoteUtils.cpp
 )
 
 # Compile definitions for standalone
