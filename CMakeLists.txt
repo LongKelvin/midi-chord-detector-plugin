@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(MidiChordDetector VERSION 1.0.0)
+# Project version - single source of truth for version numbers
+set(PROJECT_VERSION "3.0.0")
+
+project(MidiChordDetector VERSION ${PROJECT_VERSION})
 
 # JUCE Framework Setup
 # Priority order:
@@ -119,7 +122,7 @@ target_include_directories(MidiChordDetector
 juce_add_gui_app(MidiChordDetectorStandalone
     COMPANY_NAME "MusicProgrammings"
     PRODUCT_NAME "MIDI Chord Detector Standalone"
-    VERSION "3.0.0"
+    VERSION "${PROJECT_VERSION}"
 )
 
 # Standalone source files
