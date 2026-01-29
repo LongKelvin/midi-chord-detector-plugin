@@ -7,25 +7,22 @@ MidiChordDetectorAudioProcessor::MidiChordDetectorAudioProcessor()
                        // VST3 Instrument requires audio output bus (outputs silence)
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                        )
+    , chordDetector_(ChordDetection::SlashChordMode::Auto)
     , sampleRate_(44100.0)
-    , currentTimeMs_(0.0)
     , passMidiThrough_(true)
-    , minNotesForChord_(2)
-    , useTimeWindow_(true)
     , chordBufferIndex_(0)
 {
-    // Initialize chord buffers with empty "N.C." state
-    chordBuffer_[0] = ChordDetection::ChordCandidate();
-    chordBuffer_[1] = ChordDetection::ChordCandidate();
-    chordBuffer_[0].isValid = false;  // Ensure it shows "N.C."
-    chordBuffer_[1].isValid = false;
+    // Initialize chord buffers with nullptr (empty state)
+    chordBuffer_[0] = nullptr;
+    chordBuffer_[1] = nullptr;
     
-    currentChord_.store(&chordBuffer_[0], std::memory_order_release);
+    currentChordPtr_.store(nullptr, std::memory_order_release);
     newChordAvailable_.store(false, std::memory_order_release);
     midiActivityFlag_.store(false, std::memory_order_release);
     
-    // Do an initial chord detection to establish baseline
-    updateChordDetection();
+    // Configure detector with defaults
+    chordDetector_.setMinimumNotes(2);
+    chordDetector_.setSlashChordMode(ChordDetection::SlashChordMode::Auto);
 }
 
 MidiChordDetectorAudioProcessor::~MidiChordDetectorAudioProcessor()
@@ -102,18 +99,15 @@ void MidiChordDetectorAudioProcessor::prepareToPlay (double sampleRate, int samp
     juce::ignoreUnused(samplesPerBlock);
     
     sampleRate_ = sampleRate;
-    currentTimeMs_ = 0.0;
     
-    // Reset state
-    noteState_.allNotesOff();
-    chordDetector_.reset();
+    // Reset detector state
+    chordDetector_.clearNotes();
 }
 
 void MidiChordDetectorAudioProcessor::releaseResources()
 {
     // Clear state when playback stops
-    noteState_.allNotesOff();
-    chordDetector_.reset();
+    chordDetector_.clearNotes();
 }
 
 bool MidiChordDetectorAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -132,15 +126,13 @@ void MidiChordDetectorAudioProcessor::processBlock (juce::AudioBuffer<float>& bu
     // Clear audio buffers (we don't process audio, only MIDI)
     buffer.clear();
     
-    // Update time
-    currentTimeMs_ += (buffer.getNumSamples() / sampleRate_) * 1000.0;
-    
     // Copy incoming MIDI to preserve for output (explicit pass-through for host compatibility)
     juce::MidiBuffer processedMidi;
     
-    // Process incoming MIDI messages
-    bool notesChanged = false;
+    // Track if chord changed this block
+    bool chordMayHaveChanged = false;
     
+    // Process incoming MIDI messages
     for (const auto metadata : midiMessages)
     {
         const juce::MidiMessage& message = metadata.getMessage();
@@ -155,23 +147,21 @@ void MidiChordDetectorAudioProcessor::processBlock (juce::AudioBuffer<float>& bu
         if (message.isNoteOn() || message.isNoteOff() || 
             message.isController())
         {
-            notesChanged = true;
+            chordMayHaveChanged = true;
         }
         
         // Add message to output buffer (explicit pass-through)
         processedMidi.addEvent(message, samplePosition);
     }
     
-    // Event-driven chord detection:
-    // Only re-evaluate chord when a meaningful MIDI event occurs
-    // (Note On, Note Off, Sustain Pedal, All Notes Off)
-    if (notesChanged)
+    // Publish chord result if notes changed
+    if (chordMayHaveChanged)
     {
-        updateChordDetection();
+        auto chord = chordDetector_.getCurrentChord();
+        publishChordResult(chord);
     }
     
     // Swap the processed MIDI buffer to output
-    // This ensures MIDI is explicitly passed through for all hosts (including Cubase MIDI FX)
     midiMessages.swapWith(processedMidi);
 }
 
@@ -179,56 +169,27 @@ void MidiChordDetectorAudioProcessor::processMidiMessage(const juce::MidiMessage
 {
     if (message.isNoteOn())
     {
-        int note = message.getNoteNumber();
-        float velocity = message.getFloatVelocity();
-        
-        noteState_.noteOn(note, velocity);
-        chordDetector_.noteOn(note, currentTimeMs_);
+        chordDetector_.addNote(message.getNoteNumber());
     }
     else if (message.isNoteOff())
     {
-        int note = message.getNoteNumber();
-        
-        noteState_.noteOff(note);
-        chordDetector_.noteOff(note, currentTimeMs_);
+        chordDetector_.removeNote(message.getNoteNumber());
     }
     else if (message.isController())
     {
-        // Sustain pedal (CC 64)
-        if (message.getControllerNumber() == 64)
-        {
-            bool sustained = message.getControllerValue() >= 64;
-            noteState_.setSustainPedal(sustained);
-        }
         // All notes off (CC 123)
-        else if (message.getControllerNumber() == 123)
+        if (message.getControllerNumber() == 123)
         {
-            noteState_.allNotesOff();
-            chordDetector_.reset();
+            chordDetector_.clearNotes();
         }
     }
     else if (message.isAllNotesOff() || message.isAllSoundOff())
     {
-        noteState_.allNotesOff();
-        chordDetector_.reset();
+        chordDetector_.clearNotes();
     }
 }
 
-void MidiChordDetectorAudioProcessor::updateChordDetection()
-{
-    // Detect chord from current note state
-    auto chord = chordDetector_.detectChord(
-        noteState_,
-        currentTimeMs_,
-        useTimeWindow_,
-        minNotesForChord_
-    );
-    
-    // Publish result to UI thread
-    publishChordResult(chord);
-}
-
-void MidiChordDetectorAudioProcessor::publishChordResult(const ChordDetection::ChordCandidate& chord)
+void MidiChordDetectorAudioProcessor::publishChordResult(const std::shared_ptr<ChordDetection::ChordCandidate>& chord)
 {
     // Double-buffer technique for lock-free communication
     // Write to the buffer not currently being read
@@ -236,16 +197,17 @@ void MidiChordDetectorAudioProcessor::publishChordResult(const ChordDetection::C
     chordBuffer_[writeIndex] = chord;
     
     // Atomic swap to make new chord available
-    currentChord_.store(&chordBuffer_[writeIndex], std::memory_order_release);
+    currentChordPtr_.store(chordBuffer_[writeIndex].get(), std::memory_order_release);
     chordBufferIndex_ = writeIndex;
     
     newChordAvailable_.store(true, std::memory_order_release);
 }
 
-ChordDetection::ChordCandidate MidiChordDetectorAudioProcessor::getCurrentChord() const
+std::shared_ptr<ChordDetection::ChordCandidate> MidiChordDetectorAudioProcessor::getCurrentChord() const
 {
-    auto* chordPtr = currentChord_.load(std::memory_order_acquire);
-    return *chordPtr;
+    // Return the current chord from the detector
+    // This is safe because we're returning a shared_ptr copy
+    return chordBuffer_[chordBufferIndex_];
 }
 
 bool MidiChordDetectorAudioProcessor::hasNewChord() const
@@ -256,6 +218,16 @@ bool MidiChordDetectorAudioProcessor::hasNewChord() const
 bool MidiChordDetectorAudioProcessor::hasMidiActivity() const
 {
     return midiActivityFlag_.exchange(false, std::memory_order_acq_rel);
+}
+
+void MidiChordDetectorAudioProcessor::setSlashChordMode(ChordDetection::SlashChordMode mode)
+{
+    chordDetector_.setSlashChordMode(mode);
+}
+
+void MidiChordDetectorAudioProcessor::setMinimumNotes(int minNotes)
+{
+    chordDetector_.setMinimumNotes(minNotes);
 }
 
 //==============================================================================

@@ -89,7 +89,7 @@ void ChordDisplayComponent::resized()
     // Layout is handled in paint()
 }
 
-void ChordDisplayComponent::setChord(const ChordDetection::ChordCandidate& chord)
+void ChordDisplayComponent::setChord(const std::shared_ptr<ChordDetection::ChordCandidate>& chord)
 {
     currentChord_ = chord;
     updateDisplayStrings();
@@ -98,7 +98,7 @@ void ChordDisplayComponent::setChord(const ChordDetection::ChordCandidate& chord
 
 void ChordDisplayComponent::clearChord()
 {
-    currentChord_ = ChordDetection::ChordCandidate();
+    currentChord_ = nullptr;
     updateDisplayStrings();
     repaint();
 }
@@ -114,7 +114,7 @@ void ChordDisplayComponent::setMidiActivity(bool active)
 
 void ChordDisplayComponent::updateDisplayStrings()
 {
-    if (!currentChord_.isValid)
+    if (!currentChord_)
     {
         chordNameString_ = "N.C.";
         descriptionString_ = "No Chord";
@@ -124,17 +124,20 @@ void ChordDisplayComponent::updateDisplayStrings()
     }
     
     // Chord name
-    char chordNameBuffer[64];
-    currentChord_.getChordName(chordNameBuffer, sizeof(chordNameBuffer));
-    chordNameString_ = juce::String(chordNameBuffer);
+    chordNameString_ = juce::String(currentChord_->chordName);
     
-    // Description
-    descriptionString_ = juce::String(currentChord_.getChordDescription());
+    // Quality description - capitalize first letter
+    std::string quality = currentChord_->chordType;
+    if (!quality.empty())
+    {
+        quality[0] = static_cast<char>(std::toupper(quality[0]));
+    }
+    descriptionString_ = juce::String(quality);
     
-    // Inversion
-    inversionString_ = juce::String(currentChord_.getInversionText());
+    // Position/inversion
+    inversionString_ = juce::String(currentChord_->position);
     
     // Confidence
-    int confidencePercent = static_cast<int>(currentChord_.confidence * 100.0f);
+    int confidencePercent = static_cast<int>(currentChord_->confidence * 100.0f);
     confidenceString_ = juce::String("Confidence: ") + juce::String(confidencePercent) + "%";
 }

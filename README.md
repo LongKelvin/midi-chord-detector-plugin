@@ -1,38 +1,127 @@
 # MIDI Chord Detector
 
-A real-time MIDI chord detection VST3 plugin that displays the currently playing chord on-screen. Designed for live performance, practice, and composition.
+A real-time MIDI chord detection VST3 plugin with **pattern-based harmonic recognition** and **optimized scoring**. Designed for jazz, live performance, practice, and composition.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-3.0.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![VST3](https://img.shields.io/badge/VST3-Instrument-green)
 
 ## Overview
 
-MIDI Chord Detector analyzes MIDI input in real-time and displays the detected chord name. It's implemented as a **VST3 Instrument** to ensure compatibility with Cubase AI/Elements and other DAWs that don't support MIDI FX plugins.
+MIDI Chord Detector v3.0 uses a **pattern-based detection algorithm** with optimized scoring for accurate chord identification. The algorithm matches input notes against 100+ chord patterns with intelligent inversion detection and slash chord support.
+
+The plugin analyzes MIDI input using pattern matching with weighted scoring, confidence calculation, and voicing classification to produce accurate, musically-sensible chord names.
 
 **Note:** This is a **VST3 Instrument**, not a MIDI FX plugin. The MIDI FX version is available in other branches.
 
 ## Features
 
-- **Real-time chord detection** - Displays chords as you play
+### Core Capabilities
+- **100+ chord patterns** - Comprehensive coverage from triads to extended jazz voicings
+- **Pattern-based detection** - Fast matching algorithm with optimized scoring
+- **Accurate inversion detection** - 150pt bonus for root position, intelligent slash chord handling
+- **Confidence scoring** - Multi-factor weighted confidence calculation
+- **Voicing classification** - Identifies close, open, drop-2, drop-3, and rootless voicings
+- **Real-time safe** - No heap allocations in audio thread
+
+### Technical Features
 - **Event-driven architecture** - Responds instantly to MIDI events (Note On/Off, Sustain Pedal)
 - **Sustain pedal support** - Respects CC64 for natural playing
-- **Rolled chord detection** - Captures arpeggiated chords played within 150ms
-- **Voice separation** - Intelligently separates bass, chord tones, and melody
+- **Slash chord modes** - Auto, Always, or Never show bass note indicators
 - **Clean UI** - Minimal, distraction-free chord display
 - **MIDI pass-through** - Forwards all MIDI to downstream instruments
 - **Zero latency** - No audio processing, pure MIDI analysis
 
-### Supported Chord Types
+### Supported Chord Types (100+ Patterns)
 
-The detector recognizes common chord types including:
+**Basic Triads:**
 - Major, Minor, Diminished, Augmented
-- Dominant 7th, Major 7th, Minor 7th
-- Extended chords (9th, 11th, 13th)
-- Suspended chords (sus2, sus4)
-- Various alterations and jazz voicings
+- Suspended (sus2, sus4)
 
-**Note:** The chord detection algorithm works well with basic chords but may not be perfect for complex jazz voicings or unusual chord structures. It's designed for common chord progressions in pop, rock, and basic jazz contexts.
+**7th Chords:**
+- Major 7th, Dominant 7th, Minor 7th, Minor/Major 7th
+- Diminished 7th, Half-diminished (m7♭5)
+- Augmented 7th, Dominant 7sus4
+
+**Extended Chords:**
+- 9th (Major 9, Dominant 9, Minor 9)
+- 11th (Major 11, Dominant 11, Minor 11)
+- 13th (Major 13, Dominant 13, Minor 13)
+
+**Altered Dominants:**
+- 7♭5, 7♯5, 7♭9, 7♯9
+- 7♯5♭9, 7♯5♯9, 7♯11
+- 13♭9, 13♯9, 7♭9♯11
+
+**Add Chords:**
+- add9, m(add9), add11, add13
+- 6, m6, 6/9, m6/9
+
+**Special:**
+- Power chords (5)
+- Quartal voicings
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    OptimizedChordDetector                       │
+├─────────────────────────────────────────────────────────────────┤
+│  Input: std::vector<int> MIDI notes                             │
+│                                                                 │
+│  ┌─────────────────┐                                            │
+│  │ Pitch Class     │  Convert MIDI → pitch classes (0-11)       │
+│  │ Extraction      │  Identify bass note and interval set       │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  ┌─────────────────┐                                            │
+│  │ Voicing         │  Classify: close, open, drop-2/3, rootless │
+│  │ Classification  │                                            │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  ┌─────────────────┐                                            │
+│  │ Pattern         │  Test all 12 roots × 100+ patterns         │
+│  │ Matching        │  Score each candidate chord                │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  ┌─────────────────┐                                            │
+│  │ Score           │  +150pt root position, +30pt required,     │
+│  │ Calculation     │  +20pt optional, -15pt missing required    │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  ┌─────────────────┐                                            │
+│  │ Best Candidate  │  Select highest score                      │
+│  │ Selection       │  Calculate confidence                      │
+│  └────────┬────────┘                                            │
+│           │                                                     │
+│           ▼                                                     │
+│  Output: ChordCandidate { name, root, type, confidence, ... }   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Scoring Weights
+
+| Factor | Points | Description |
+|--------|--------|-------------|
+| Root Position Bonus | +150 | Bass note matches chord root |
+| Required Interval | +30 | Each required interval present |
+| Optional Interval | +20 | Each optional interval present |
+| Missing Required | -15 | Penalty for missing required intervals |
+| Voicing Type | ×1.0-1.2 | Bonus for valid voicing patterns |
+
+### Confidence Calculation
+
+```
+margin = (bestScore - secondBest) / bestScore
+absolute = score / maxPossible
+noteCount = notes.size() / 6.0
+
+confidence = 0.4 × margin + 0.4 × absolute + 0.2 × noteCount + exactBonus
+```
 
 ## Usage in DAW
 
@@ -127,35 +216,58 @@ DAWs that should theoretically work:
 
 The plugin uses the following default settings:
 
+### Engine Parameters
 - **Minimum notes for chord:** 2
-- **Time window for rolled chords:** 150ms
-- **Voice separation:**
-  - Bass: below E3 (MIDI note 52)
-  - Melody: above C5 (MIDI note 72)
-  - Chord tones: E3 to C5
+- **Memory window:** 200ms (temporal reasoning)
+- **Decay half-life:** 100ms (exponential weighting)
+- **Minimum confidence:** 0.45 (detection threshold)
+
+### Voice Separation
+- **Bass:** below E3 (MIDI note 52)
+- **Melody:** above C5 (MIDI note 72)
+- **Chord tones:** E3 to C5
 
 These settings are optimized for typical keyboard playing and cannot currently be changed (may be configurable in future versions).
 
 ## How It Works
 
-The plugin uses a sophisticated chord detection algorithm:
+The plugin uses a **pattern-based detection algorithm** with optimized scoring:
 
-1. **Event-Driven Detection** - Chord analysis triggers only on MIDI events (Note On/Off, Sustain Pedal), not on timers
-2. **Note State Tracking** - Maintains accurate state of held notes and sustain pedal
-3. **Voice Separation** - Separates bass, chord tones, and melody notes
-4. **Pitch Class Analysis** - Converts notes to pitch classes (0-11) for root-independent analysis
-5. **Pattern Matching** - Tests all 12 possible roots against all chord type definitions
-6. **Weighted Scoring** - Scores candidates based on interval importance and completeness
-7. **Best Match Selection** - Selects the highest-scoring chord that meets minimum threshold
+### 1. Note State Tracking
+- Tracks all active notes
+- Respects sustain pedal (CC64)
+- Converts MIDI notes to pitch classes (0-11)
 
-The algorithm prioritizes:
-- Common chord types over exotic ones
-- Root position over inversions (but detects and displays both)
-- Complete chord intervals over partial matches
+### 2. Voicing Classification
+Analyzes note spacing to identify:
+- **Close voicing** - Notes within an octave
+- **Open voicing** - Notes spread across > 2 octaves
+- **Drop-2/Drop-3** - Jazz piano voicings with dropped notes
+- **Rootless** - Common jazz voicings without root
+
+### 3. Pattern Matching
+- Tests each of 12 possible roots (C through B)
+- Evaluates against 100+ chord pattern definitions
+- Calculates match scores using weighted intervals
+
+### 4. Scoring
+Point-based scoring system:
+- **+150 points** - Root position (bass = chord root)
+- **+30 points** - Each required interval present
+- **+20 points** - Each optional interval present
+- **-15 points** - Each missing required interval
+- **×1.0-1.2** - Voicing type multiplier
+
+### 5. Confidence Calculation
+Multi-factor weighted confidence:
+- **40% margin** - Score gap between best and second-best
+- **40% absolute** - Raw score as % of maximum
+- **20% note count** - More notes = higher confidence
+- **+0.1 bonus** - Exact interval match
 
 ## Known Limitations
 
-- **Chord detection is not perfect** - Works well for common chords (major, minor, 7ths, etc.) but may misidentify complex jazz chords or polychords
+- **Jazz detection** - Handles most jazz harmony; highly complex polychords may misidentify
 - **Only tested with Cubase** - May have issues with other DAWs
 - **Windows only** - No macOS build currently available
 - **No user settings** - Configuration is hard-coded
@@ -206,12 +318,12 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 Contributions are welcome! Areas that need improvement:
 
-- chord detection algorithm accuracy
-- macOS support
-- User-configurable settings
-- Additional chord types
-- Testing with other DAWs
-- UI improvements
+- **Additional chord patterns** - Add more specialized voicings
+- **Scoring weight tuning** - Optimize weights based on real-world testing
+- **macOS support** - Cross-platform build
+- **User-configurable settings** - Expose engine parameters in UI
+- **Testing with other DAWs** - Verify compatibility
+- **UI improvements** - Visual feedback for confidence, chord history
 
 ## Author
 
@@ -221,8 +333,9 @@ GitHub: [https://github.com/LongKelvin](https://github.com/LongKelvin)
 ## Acknowledgments
 
 - Built with [JUCE Framework](https://juce.com/)
-- Chord detection algorithm based on weighted pitch class analysis
-- Inspired by the need for real-time chord feedback in Cubase AI/Elements
+- Pattern-based detection algorithm with optimized scoring
+- Chord patterns based on music theory interval analysis
+- Inspired by the need for jazz-capable chord feedback in Cubase AI/Elements
 
 ---
 
