@@ -1,8 +1,8 @@
 # Technical Design Document
 
-**MidiChordDetector - VST3 Instrument Plugin**
+**MIDI Chord Detector - VST3 Instrument Plugin**
 
-This document provides a high-level technical overview of the project for developers who want to understand, build, test, or extend the chord detection plugin.
+This document provides a high-level technical overview for developers who want to understand, build, test, or extend the chord detection plugin.
 
 ---
 
@@ -23,14 +23,15 @@ This document provides a high-level technical overview of the project for develo
 
 ### What This Plugin Does
 
-MidiChordDetector is a **VST3 Instrument plugin** that analyzes incoming MIDI notes and detects the chord being played. It displays the chord name in real-time as you play.
+MIDI Chord Detector is a **VST3 Instrument plugin** that analyzes incoming MIDI notes and detects the chord being played using a pattern-based interval matching algorithm. It displays the chord name in real-time as you play.
 
 **Key features:**
 
 - Real-time chord detection from MIDI input
-- Support for triads, 7th chords, extensions (9, 11, 13), and altered dominants
-- Slash chord notation for inversions
-- Temporal stability (chords do not flicker)
+- 60+ chord patterns (triads, 7ths, extensions, altered dominants)
+- Interval-based pattern matching with optimized scoring
+- Slash chord notation for inversions (configurable)
+- Voicing classification (close, open, drop-2, drop-3, rootless)
 - Low latency, suitable for live performance
 
 ### Why VST3 Instrument (Not MIDI FX)?
@@ -40,11 +41,14 @@ This plugin is intentionally a **VST3 Instrument**, not a MIDI Effect. This is a
 - **Cubase AI / Elements** (commonly bundled with audio interfaces) does not support MIDI FX plugins
 - VST3 Instruments receive MIDI input reliably across all major DAWs
 - The plugin does not synthesize audio; it only analyzes MIDI and displays results
+- MIDI pass-through is implemented to forward notes to downstream instruments
 
 ### Supported DAWs
 
-Tested with:
+**Tested:**
 - Cubase (all versions)
+
+**Should work (untested):**
 - Ableton Live
 - FL Studio
 - Reaper
@@ -69,9 +73,12 @@ Tested with:
 ┌─────────────────────────────────────────────────────────────────┐
 │                         DAW Host                                │
 │                                                                 │
-│   MIDI Track ──────► Plugin Instance ──────► UI Display         │
+│   MIDI Track ──────► VST3 Instrument ──────► UI Display         │
+│                      (Chord Detector)       (shows chord name)  │
 │                            │                                    │
-│                      (no audio out)                             │
+│                            ▼                                    │
+│                      MIDI Pass-Through                          │
+│                      (to downstream)                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -83,10 +90,12 @@ Tested with:
 │                    (Audio Thread)                               │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│   MIDI Input ──► MidiNoteState ──► ChordDetectorEngine          │
+│   MIDI Input ──► Note Tracking ──► ChordDetector                │
+│   (Note On/Off,     (active notes,      (pattern matching,     │
+│    Sustain CC)      pitch classes)       scoring)              │
 │                                           │                     │
 │                                           ▼                     │
-│                                    ResolvedChord                │
+│                                    ChordCandidate               │
 │                                           │                     │
 │                              (atomic swap to UI thread)         │
 │                                           │                     │
@@ -98,7 +107,13 @@ Tested with:
 │                    (UI Thread)                                  │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│   Display: "Cmaj7"  [confidence: 0.85]                          │
+│   ChordDisplayComponent                                         │
+│   ┌───────────────────────────────────────────┐                │
+│   │                                           │                │
+│   │           Cmaj7/E                         │                │
+│   │                                           │                │
+│   │   Confidence: 0.85  |  Root Position     │                │
+│   └───────────────────────────────────────────┘                │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -107,187 +122,273 @@ Tested with:
 
 | Thread | Components | Communication |
 |--------|-----------|---------------|
-| Audio Thread | PluginProcessor, ChordDetectorEngine | Lock-free, no allocations |
-| UI Thread | PluginEditor | Reads atomic chord pointer |
+| Audio Thread | PluginProcessor, ChordDetector | Lock-free, no allocations |
+| UI Thread | PluginEditor, ChordDisplayComponent | Reads atomic chord pointer |
 
-Cross-thread communication uses a double-buffered atomic pointer swap. No mutexes or locks are used.
+Cross-thread communication uses atomic pointers for the current chord. No mutexes or locks are used.
 
 ---
 
 ## 3. Project Structure
 
 ```text
-MidiChordDetector/
+midi-chord-detector-plugin/
 ├── CMakeLists.txt              # Build configuration
 ├── build.ps1                   # Windows build script
+├── build.bat                   # Windows build script (cmd)
+├── README.md                   # Project overview
+├── LICENSE                     # MIT license
 ├── Docs/
-│   ├── H-WCTM-Algorithm-Implementation.md
-│   └── Technical-Design.md     # This file
+│   ├── Algorithm-Explanation.md         # How the algorithm works
+│   ├── Algorithm-Implementation.md      # Implementation details
+│   └── Technical-Design.md              # This file
 ├── Resources/
-│   ├── Fonts/                  # UI fonts
-│   └── JUCE/                   # JUCE framework (submodule)
+│   └── JUCE/                   # JUCE framework (Git submodule)
 ├── Source/
-│   ├── PluginProcessor.cpp     # JUCE audio processor
-│   ├── PluginProcessor.h
-│   ├── PluginEditor.cpp        # JUCE UI editor
-│   ├── PluginEditor.h
-│   ├── core/                   # Chord detection engine
-│   │   ├── ChordDetectorEngine.h/.cpp
-│   │   ├── CandidateGenerator.h/.cpp
-│   │   ├── ChordResolver.h/.cpp
-│   │   ├── ConfidenceScorer.h/.cpp
-│   │   ├── HarmonicMemory.h/.cpp
-│   │   ├── MidiNoteState.h/.cpp
-│   │   ├── ChordTemplates.h
-│   │   ├── ChromaVector.h
-│   │   └── ...
-│   ├── tests/                  # Standalone test suite
-│   │   ├── ChordDetectionTests.cpp
-│   │   └── CMakeLists.txt
-│   └── ui/                     # UI components
-└── build/                      # CMake build output
+│   ├── PluginProcessor.cpp/.h  # JUCE audio processor
+│   ├── PluginEditor.cpp/.h     # JUCE UI editor
+│   ├── chord_detection/
+│   │   ├── api/
+│   │   │   └── JuceChordDetector.h     # JUCE wrapper
+│   │   └── detector/
+│   │       ├── ChordDetector.h/.cpp    # Main orchestrator
+│   │       ├── ChordPattern.h          # Pattern structure
+│   │       ├── ChordPatterns.h/.cpp    # 60+ patterns
+│   │       ├── ChordScoring.h/.cpp     # Scoring engine
+│   │       ├── ChordCandidate.h        # Result structure
+│   │       ├── VoicingAnalyzer.h/.cpp  # Voicing classification
+│   │       ├── ChordFormatter.h/.cpp   # Display formatting
+│   │       ├── NoteUtils.h/.cpp        # Utilities
+│   │       └── ChordTypes.h            # Enums & constants
+│   ├── ui/
+│   │   └── ChordDisplayComponent.h/.cpp # Chord display UI
+│   ├── standalone/
+│   │   ├── Main.cpp                    # Standalone app entry
+│   │   └── MainComponent.h/.cpp        # Standalone UI
+│   └── tests/
+│       ├── ChordDetectionTests.cpp     # Unit tests
+│       ├── CMakeLists.txt              # Test build config
+│       └── chord_tests.json            # Test data
+└── build/                      # CMake build output (gitignored)
 ```
 
 ### Why This Structure?
 
 | Directory | Purpose |
 |-----------|---------|
-| `Source/core/` | Isolates detection logic from JUCE. Can be unit tested standalone. |
-| `Source/tests/` | Standalone executable. No JUCE audio dependencies. |
-| `Resources/JUCE/` | JUCE as a Git submodule. Keeps dependency explicit. |
+| `Source/chord_detection/` | Core detection logic, JUCE-independent |
+| `Source/ui/` | UI components (JUCE-dependent) |
+| `Source/tests/` | Standalone test executable |
+| `Resources/JUCE/` | JUCE as Git submodule |
+| `Docs/` | Algorithm and design documentation |
 
 ---
 
 ## 4. Core Components
 
-### 4.1 ChordDetectorEngine
+### 4.1 PluginProcessor
 
-**File:** [ChordDetectorEngine.h](../Source/core/ChordDetectorEngine.h)
+**File:** `PluginProcessor.h/.cpp`
 
-The main orchestrator. Owns all detection subsystems and coordinates the pipeline.
+Main JUCE audio processor for the VST3 plugin.
 
 **Responsibilities:**
 
-- Receive MIDI events (noteOn, noteOff, sustain pedal)
-- Trigger detection on request
-- Return ResolvedChord result
+- Receive MIDI events from host
+- Track note on/off and sustain pedal (CC64)
+- Trigger chord detection on note changes
+- Pass MIDI through unchanged (for downstream instruments)
+- Communicate chord results to UI thread atomically
 
-**Must not:**
-
-- Perform any heap allocations
-- Block or wait
-- Access UI directly
-
-**Key methods:**
+**Key Methods:**
 
 ```cpp
-void noteOn(int noteNumber, float velocity, double currentTimeMs);
-void noteOff(int noteNumber, double currentTimeMs);
-ResolvedChord detectChord(double currentTimeMs);
+void processBlock(AudioBuffer<float>&, MidiBuffer& midiMessages);
+void processMidiMessage(const MidiMessage& message);
+std::shared_ptr<ChordCandidate> getCurrentChord() const;
 ```
 
-### 4.2 MidiNoteState
+**Real-Time Safety:**
+- No allocations in processBlock
+- Atomic pointer for UI communication
+- Pre-allocated chord buffers
 
-**File:** [MidiNoteState.h](../Source/core/MidiNoteState.h)
+### 4.2 ChordDetector
 
-Tracks which notes are currently active, with velocity and timing.
+**File:** `Source/chord_detection/detector/ChordDetector.h/.cpp`
 
-**Responsibilities:**
-
-- Maintain bitset of active notes (0-127)
-- Handle sustain pedal logic
-- Provide pitch class set for detection
-- Identify bass (lowest) note
-
-### 4.3 CandidateGenerator
-
-**File:** [CandidateGenerator.h](../Source/core/CandidateGenerator.h)
-
-Implements the H-WCTM matching algorithm. Generates chord hypotheses.
+Main orchestrator for chord detection algorithm.
 
 **Responsibilities:**
 
-- Build weighted ChromaVector from note state
-- Test all 12 roots against all templates
-- Calculate cosine similarity scores
-- Output array of ChordHypothesis
+- Entry point for detection
+- Coordinate pattern matching, scoring, and selection
+- Manage pattern database and interval index
+- Track chord history (optional)
 
-**Must not:**
+**Key Methods:**
 
-- Make final chord decisions (that is ChordResolver's job)
-- Apply temporal logic (that is HarmonicMemory's job)
+```cpp
+ChordDetector(bool enableContext, SlashChordMode slashMode);
+std::shared_ptr<ChordCandidate> detectChord(const std::vector<int>& midiNotes);
+void setSlashChordMode(SlashChordMode mode);
+```
 
-### 4.4 HarmonicMemory
+**Not Thread-Safe:** Use separate instances per thread.
 
-**File:** [HarmonicMemory.h](../Source/core/HarmonicMemory.h)
+### 4.3 ChordPatterns
 
-Provides temporal stability by tracking chord hypotheses over time.
+**File:** `Source/chord_detection/detector/ChordPatterns.h/.cpp`
 
-**Responsibilities:**
-
-- Store recent harmonic frames (sliding window)
-- Apply exponential time decay to older frames
-- Reinforce candidates that persist across frames
-- Output ReinforcedCandidate array
-
-### 4.5 ConfidenceScorer
-
-**File:** [ConfidenceScorer.h](../Source/core/ConfidenceScorer.h)
-
-Calculates final confidence scores using multiple weighted factors.
-
-**Scoring factors:**
-
-- Interval coverage (0.25)
-- Missing core tones penalty (0.20)
-- Bass alignment (0.15)
-- Temporal stability (0.30)
-- Complexity penalty (0.05)
-- Velocity weight (0.05)
-
-### 4.6 ChordResolver
-
-**File:** [ChordResolver.h](../Source/core/ChordResolver.h)
-
-Makes the final chord selection from scored candidates.
+60+ chord pattern definitions and interval index builder.
 
 **Responsibilities:**
 
-- Apply stability preference (keep previous chord if close)
-- Apply simplicity preference (prefer simpler chords when scores are close)
-- Enforce minimum confidence threshold
-- Build final ResolvedChord output
+- Define all chord patterns (intervals, scoring, display)
+- Build interval index for O(1) exact match lookup
+- Provide pattern data to detector
+
+**Key Functions:**
+
+```cpp
+void initializePatterns(std::map<std::string, ChordPattern>& patterns);
+void buildIntervalIndex(
+    const std::map<std::string, ChordPattern>& patterns,
+    std::map<std::vector<int>, std::vector<std::string>>& index);
+```
+
+### 4.4 ChordScoring
+
+**File:** `Source/chord_detection/detector/ChordScoring.h/.cpp`
+
+Scoring engine for chord candidates.
+
+**Responsibilities:**
+
+- Score candidates using weighted factors
+- Calculate confidence from score distribution
+- Implement scoring heuristics
+
+**Key Functions:**
+
+```cpp
+float computeScore(
+    const std::vector<int>& intervals,
+    const ChordPattern& pattern,
+    int bassPitchClass,
+    int potentialRoot,
+    VoicingType voicingType);
+
+float computeConfidence(
+    float bestScore,
+    float secondBestScore,
+    int noteCount,
+    bool exactMatch);
+```
+
+### 4.5 VoicingAnalyzer
+
+**File:** `Source/chord_detection/detector/VoicingAnalyzer.h/.cpp`
+
+Classifies chord voicing types.
+
+**Responsibilities:**
+
+- Analyze note spacing
+- Classify voicing (close, open, drop-2, drop-3, rootless)
+- Calculate note span
+
+**Key Functions:**
+
+```cpp
+VoicingType classifyVoicing(const std::vector<int>& midiNotes);
+int calculateSpan(const std::vector<int>& midiNotes);
+bool isCloseVoicing(const std::vector<int>& midiNotes);
+```
+
+### 4.6 NoteUtils
+
+**File:** `Source/chord_detection/detector/NoteUtils.h/.cpp`
+
+Utility functions for MIDI/pitch operations.
+
+**Responsibilities:**
+
+- Convert MIDI to pitch class
+- Calculate intervals
+- Generate note names and degree labels
+- Format display strings
+
+**Key Functions:**
+
+```cpp
+int midiToPitchClass(int midiNote);
+int intervalBetween(int root, int pitchClass);
+std::string getNoteName(int pitchClass);
+std::string getDegreeName(int interval);
+```
+
+### 4.7 ChordDisplayComponent
+
+**File:** `Source/ui/ChordDisplayComponent.h/.cpp`
+
+UI component for displaying detected chords.
+
+**Responsibilities:**
+
+- Render chord name
+- Show confidence and additional info
+- Update on timer (polls from audio thread)
 
 ---
 
 ## 5. Algorithm Integration
 
-### Where Templates Live
+### Detection Entry Point
 
-Chord templates are defined in [ChordTemplates.h](../Source/core/ChordTemplates.h).
+```cpp
+// In PluginProcessor::processMidiMessage()
+if (message.isNoteOn()) {
+    chordDetector_.noteOn(noteNumber);
+} else if (message.isNoteOff()) {
+    chordDetector_.noteOff(noteNumber);
+} else if (message.isController() && message.getControllerNumber() == 64) {
+    chordDetector_.setSustainPedal(message.getControllerValue() >= 64);
+}
 
-Each template specifies:
-- Name and full name
-- 12-bin float weights (index 0 = root)
-- Complexity level
-- Priority (for tie-breaking)
-- Shell voicing flag
+// Detect chord after state change
+auto detectedChord = chordDetector_.detectChord(activeNotesList);
+```
 
-### Where Scoring Happens
+### Pattern Database Location
 
-1. **CandidateGenerator:** Cosine similarity + extension bonus + priority bonus = baseScore
-2. **ConfidenceScorer:** Multi-factor weighted confidence calculation
-3. **ChordResolver:** Final selection with stability/simplicity preferences
+Chord patterns are defined in `Source/chord_detection/detector/ChordPatterns.cpp`.
 
-### Where to Add Improvements
+Each pattern specifies:
+- **Intervals** - Semitone distances from root
+- **Base Score** - Starting score (80-135)
+- **Required** - Intervals that must be present
+- **Optional** - Intervals that don't disqualify
+- **Important** - Quality-defining intervals (3rd, 7th)
+- **Display** - Format string with `{root}` placeholder
+- **Quality** - Category label
+
+### Scoring Breakdown
+
+Scoring happens in `Source/chord_detection/detector/ChordScoring.cpp`:
+
+1. **ChordScoring::computeScore()** - Calculate weighted score for a candidate
+2. **ChordScoring::computeConfidence()** - Calculate confidence from score distribution
+
+### Where to Make Changes
 
 | Task | Location |
 |------|----------|
-| Add new chord type | `ChordTemplates.h` - add to CHORD_TEMPLATES array |
-| Adjust scoring weights | `ConfidenceScorer.h` - ScoringWeights struct |
-| Change stability behavior | `ChordResolver.h` - ResolutionConfig |
-| Modify bass boost | `ChromaVector.h` - ChromaWeights |
-| Change decay rate | `HarmonicMemory.h` - setDecayHalfLifeMs() |
+| Add new chord type | `ChordPatterns.cpp` - add to `initializePatterns()` |
+| Adjust scoring weights | `ChordScoring.cpp` - modify bonuses/penalties |
+| Change minimum threshold | `ChordTypes.h` - modify `kMinimumScoreThreshold` |
+| Add new voicing type | `ChordTypes.h` + `VoicingAnalyzer.cpp` |
+| Change slash chord behavior | `ChordDetector.cpp` - `setSlashChordMode()` |
 
 ---
 
@@ -295,15 +396,15 @@ Each template specifies:
 
 ### Test Harness
 
-**File:** [ChordDetectionTests.cpp](../Source/tests/ChordDetectionTests.cpp)
+**File:** `Source/tests/ChordDetectionTests.cpp`
 
-A standalone C++ executable that tests the chord detection core without JUCE audio dependencies.
+A standalone C++ executable that tests the chord detection core without JUCE dependencies.
 
 ### Building Tests
 
 ```powershell
 cd Source/tests
-cmake -B build -G "Visual Studio 17 2022"
+cmake -B build
 cmake --build build --config Release
 ```
 
@@ -313,23 +414,35 @@ cmake --build build --config Release
 .\build\Release\ChordDetectionTests.exe
 ```
 
+Or use the convenience script:
+
+```powershell
+.\run_tests.ps1
+```
+
 ### Test Output
 
 ```text
 ========================================
-H-WCTM CHORD DETECTION TEST SUITE
+CHORD DETECTION TEST SUITE
 ========================================
 
 --- Basic Triads ---
-[PASS] C Major -> C (conf: 0.513)
-[PASS] C Minor -> Cm (conf: 0.536)
-...
+[PASS] C Major (C-E-G) -> C
+[PASS] C Minor (C-Eb-G) -> Cm
+[PASS] C Diminished (C-Eb-Gb) -> Cdim
+[PASS] C Augmented (C-E-G#) -> Caug
+
+--- Seventh Chords ---
+[PASS] C Major 7 (C-E-G-B) -> Cmaj7
+[PASS] C Dominant 7 (C-E-G-Bb) -> C7
+[PASS] C Minor 7 (C-Eb-G-Bb) -> Cm7
 
 ========================================
 TEST SUMMARY
 ========================================
-Total:  41
-Passed: 41
+Total:  42
+Passed: 42
 Failed: 0
 Rate:   100%
 ========================================
@@ -339,21 +452,23 @@ Rate:   100%
 
 | Category | Examples |
 |----------|----------|
-| Basic triads | Major, minor, diminished, augmented, sus2, sus4 |
-| 7th chords | maj7, m7, 7, mMaj7, m7b5, dim7 |
-| Extended chords | maj9, 9, m9, m11, 13, 6 |
-| Altered dominants | 7b9, 7#9, 7b5, 7#5, 7sus4 |
+| Basic triads | major, minor, dim, aug, sus2, sus4 |
+| 7th chords | maj7, m7, 7, mMaj7, dim7, m7♭5, aug7 |
+| Extended chords | maj9, 9, m9, maj11, 11, m11, maj13, 13, m13 |
+| Altered dominants | 7♭9, 7♯9, 7♭5, 7♯5, 7♯11, 7alt |
+| Sixth chords | 6, m6, 6/9, m6/9 |
+| Add chords | add9, m(add9), add11, add♯11 |
 | Inversions | C/E, C/G, Cm/Eb, Dm7/F |
-| Register variations | Wide voicings, low register, high register |
+| Voicings | Close, open, rootless, wide spread |
 
 ### Why Deterministic Tests Matter
 
 The chord detector must be:
-- **Deterministic:** Same input always produces same output
-- **Testable:** Every change can be validated automatically
-- **Regression-safe:** Breaking changes are caught immediately
+- **Deterministic** - Same input always produces same output
+- **Testable** - Every change can be validated automatically
+- **Regression-safe** - Breaking changes are caught immediately
 
-Non-deterministic behavior (timing-dependent, random) would make the test suite useless.
+Non-deterministic behavior (timing-dependent, random) would make testing impossible.
 
 ---
 
@@ -399,52 +514,88 @@ Built VST3 plugin: `build/MidiChordDetector_artefacts/Release/VST3/`
 
 ## 8. Contribution Guidelines
 
-### Adding New Chord Templates
+### Adding New Chord Patterns
 
-1. Open [ChordTemplates.h](../Source/core/ChordTemplates.h)
-2. Add entry to `CHORD_TEMPLATES` array
-3. Follow weight guidelines:
-   - Root, 3rd, 7th: 1.0
-   - 5th: 0.2
-   - Extensions: 0.3-0.8
-4. Set appropriate complexity (1-4) and priority
-5. Add test case to `ChordDetectionTests.cpp`
-6. Run tests to validate
+1. Open `Source/chord_detection/detector/ChordPatterns.cpp`
+2. Add entry to `initializePatterns()`:
+
+```cpp
+patterns["myNewChord"] = ChordPattern(
+    {0, 3, 6, 10},      // intervals
+    115,                 // base score
+    {0, 3, 6, 10},      // required
+    {},                  // optional
+    {3, 6, 10},         // important
+    "{root}dim7",       // display
+    "diminished"        // quality
+);
+```
+
+3. Add test case to `Source/tests/ChordDetectionTests.cpp`:
+
+```cpp
+TEST_CASE("New Chord Type") {
+    ChordDetector detector;
+    auto result = detector.detectChord({60, 63, 66, 69});  // Notes
+    REQUIRE(result != nullptr);
+    REQUIRE(result->chordName == "Cdim7");
+    REQUIRE(result->confidence > 0.5);
+}
+```
+
+4. Run tests to validate:
+
+```powershell
+.\run_tests.ps1
+```
+
+### Tuning Scoring Weights
+
+**File to edit:** `Source/chord_detection/detector/ChordScoring.cpp`
+
+**What can be tuned:**
+- Exact match bonus (+150)
+- Required interval bonus (+30)
+- Optional interval bonus (+10)
+- Important interval bonus (+30)
+- Root position bonus (+15)
+- Match ratio multiplier (×80)
+- Extra interval penalty (-8)
+
+**Always test changes extensively with real MIDI input!**
 
 ### Extending Detection Logic
 
 **Safe to modify:**
-
-- Template weights and priorities
-- Scoring weights in ConfidenceScorer
-- Resolution thresholds in ChordResolver
+- Pattern definitions and base scores
+- Scoring bonuses/penalties
+- Confidence calculation weights
 
 **Requires careful testing:**
+- Root testing loop logic
+- Interval calculation
+- Voicing classification
 
-- ChromaVector weighting (bass boost, register weights)
-- CandidateGenerator scoring formula
-- HarmonicMemory decay parameters
-
-**Do not modify without understanding side effects:**
-
-- MidiNoteState bitset logic
-- ChordDetectorEngine pipeline order
-- Cross-thread communication in PluginProcessor
+**Do not modify without deep understanding:**
+- MIDI event handling in PluginProcessor
+- Thread communication (atomic pointers)
+- JUCE audio thread constraints
 
 ### Validating Changes
 
-1. Run the full test suite
-2. Verify no regressions in existing test cases
-3. Add new test cases for new functionality
-4. Test in DAW with real MIDI input
+1. **Run unit tests** - Ensure no regressions
+2. **Test in DAW** - Verify real-world behavior
+3. **Add new tests** - Cover new functionality
+4. **Document changes** - Update relevant docs
 
 ### Code Style
 
-- C++17 standard
-- No exceptions in real-time code
-- No heap allocations in audio thread
-- Use fixed-size arrays and pre-allocated buffers
-- Document non-obvious design decisions
+- **C++17** standard
+- **No exceptions** in real-time code
+- **No allocations** in audio thread
+- **Use fixed-size containers** where possible
+- **Document non-obvious decisions**
+- **Follow existing naming conventions**
 
 ---
 
@@ -454,26 +605,49 @@ Built VST3 plugin: `build/MidiChordDetector_artefacts/Release/VST3/`
 
 | Task | File |
 |------|------|
-| Add chord template | `Source/core/ChordTemplates.h` |
-| Adjust scoring | `Source/core/ConfidenceScorer.h` |
-| Change resolution rules | `Source/core/ChordResolver.h` |
-| Modify bass boost | `Source/core/ChromaVector.h` |
+| Add chord pattern | `Source/chord_detection/detector/ChordPatterns.cpp` |
+| Adjust scoring | `Source/chord_detection/detector/ChordScoring.cpp` |
+| Modify voicing classification | `Source/chord_detection/detector/VoicingAnalyzer.cpp` |
+| Change UI display | `Source/ui/ChordDisplayComponent.cpp` |
 | Add test case | `Source/tests/ChordDetectionTests.cpp` |
-| Modify UI | `Source/PluginEditor.cpp` |
+| Modify MIDI handling | `Source/PluginProcessor.cpp` |
 
 ### Configuration Constants
 
-| Constant | Location | Default |
-|----------|----------|---------|
-| Bass boost | ChromaVector.h | 3.0 |
-| Memory window | HarmonicMemory.h | 200ms |
-| Decay half-life | HarmonicMemory.h | 100ms |
-| Min confidence | ChordResolver.h | 0.45 |
-| Simplicity margin | ChordResolver.h | 0.01 |
+| Constant | Location | Default | Description |
+|----------|----------|---------|-------------|
+| kPitchClassCount | ChordTypes.h | 12 | Pitch classes (C-B) |
+| kDefaultMinimumNotes | ChordTypes.h | 2 | Min notes for detection |
+| kMinimumScoreThreshold | ChordTypes.h | 80.0 | Min score to accept |
+| kMaxChordHistorySize | ChordTypes.h | 10 | Chord history buffer |
 
-### Test Command
+### Build Commands
 
 ```powershell
+# Full plugin build
+cmake -B build
+cmake --build build --config Release
+
+# Test build and run
 cd Source/tests
-cmake --build build --config Release; .\build\Release\ChordDetectionTests.exe
+cmake -B build
+cmake --build build --config Release
+.\build\Release\ChordDetectionTests.exe
+
+# Or use convenience script
+.\run_tests.ps1
 ```
+
+### Plugin Installation
+
+```powershell
+# Copy VST3 to system directory (requires admin)
+xcopy "build\MidiChordDetector_artefacts\Release\VST3\MIDI Chord Detector.vst3" `
+      "C:\Program Files\Common Files\VST3\MIDI Chord Detector.vst3" /E /I /Y
+```
+
+---
+
+**Document Version:** 3.0.0  
+**Last Updated:** January 2026  
+**Author:** Long Kelvin
