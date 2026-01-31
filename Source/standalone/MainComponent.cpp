@@ -16,7 +16,7 @@
 MainComponent::MainComponent()
     : chordDetector(ChordDetection::SlashChordMode::Auto)
 {
-    setSize (800, 700);
+    setSize (800, 850);  // Increased height to accommodate keyboard
     
     // Configure the chord detector with defaults
     chordDetector.setMinimumNotes(2);
@@ -97,6 +97,13 @@ MainComponent::MainComponent()
     addAndMakeVisible (pitchClassLabel);
     
     //==========================================================================
+    // Piano keyboard view
+    pianoKeyboard.setKeyRange(21, 108);  // A0 to C8 (full 88-key piano)
+    pianoKeyboard.setPressedWhiteKeyColour(juce::Colour(0xff00ccff));  // Cyan to match chord display
+    pianoKeyboard.setPressedBlackKeyColour(juce::Colour(0xff0088bb));
+    addAndMakeVisible(pianoKeyboard);
+    
+    //==========================================================================
     // Debug section
     debugLabel.setText ("Debug Log:", juce::dontSendNotification);
     debugLabel.setFont (juce::Font (16.0f, juce::Font::bold));
@@ -162,8 +169,11 @@ void MainComponent::paint (juce::Graphics& g)
     // Line below chord display section
     g.drawHorizontalLine (340, 20.0f, (float) getWidth() - 20.0f);
     
-    // Line below active notes section
+    // Line below active notes section (before piano)
     g.drawHorizontalLine (430, 20.0f, (float) getWidth() - 20.0f);
+    
+    // Line below piano keyboard section
+    g.drawHorizontalLine (550, 20.0f, (float) getWidth() - 20.0f);
 }
 
 void MainComponent::resized()
@@ -196,6 +206,10 @@ void MainComponent::resized()
     notesLabel.setBounds (bounds.removeFromTop (25));
     activeNotesLabel.setBounds (bounds.removeFromTop (25));
     pitchClassLabel.setBounds (bounds.removeFromTop (25));
+    bounds.removeFromTop (15); // Spacing
+    
+    // Piano keyboard section
+    pianoKeyboard.setBounds (bounds.removeFromTop (100));
     bounds.removeFromTop (15); // Spacing
     
     // Debug section
@@ -329,7 +343,10 @@ void MainComponent::handleIncomingMidiMessage (juce::MidiInput* /*source*/, cons
                 // Release: flush all deferred NoteOffs
                 for (int i = 0; i < 128; ++i)
                     if (sustainedNotes_.test (static_cast<size_t> (i)))
+                    {
                         chordDetector.removeNote (i);
+                        pianoKeyboard.setKeyState (i, false);
+                    }
 
                 sustainedNotes_.reset();
                 noteChanged = true;
@@ -344,6 +361,7 @@ void MainComponent::handleIncomingMidiMessage (juce::MidiInput* /*source*/, cons
         {
             sustainedNotes_.reset (static_cast<size_t> (message.getNoteNumber()));
             chordDetector.addNote (message.getNoteNumber());
+            pianoKeyboard.setKeyState (message.getNoteNumber(), true);
             noteChanged = true;
         }
         // -----------------------------------------------------------------------
@@ -359,6 +377,7 @@ void MainComponent::handleIncomingMidiMessage (juce::MidiInput* /*source*/, cons
             else
             {
                 chordDetector.removeNote (message.getNoteNumber());
+                pianoKeyboard.setKeyState (message.getNoteNumber(), false);
                 noteChanged = true;
             }
         }
@@ -371,6 +390,7 @@ void MainComponent::handleIncomingMidiMessage (juce::MidiInput* /*source*/, cons
             sustainedNotes_.reset();
             sustainPedalDown_ = false;
             chordDetector.clearNotes();
+            pianoKeyboard.clearAllKeys();
             noteChanged = true;
         }
 

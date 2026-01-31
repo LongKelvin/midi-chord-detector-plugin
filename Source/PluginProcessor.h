@@ -88,6 +88,11 @@ public:
     bool hasMidiActivity() const;
     
     /**
+     * Get currently held MIDI notes (for keyboard display)
+     */
+    std::vector<int> getCurrentNotes() const;
+    
+    /**
      * Set slash chord mode
      */
     void setSlashChordMode(ChordDetection::SlashChordMode mode);

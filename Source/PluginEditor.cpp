@@ -5,11 +5,17 @@
 MidiChordDetectorAudioProcessorEditor::MidiChordDetectorAudioProcessorEditor (MidiChordDetectorAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
-    // Set editor size
-    setSize (400, 300);
+    // Set editor size to accommodate keyboard
+    setSize (500, 450);
     
     // Add chord display component
     addAndMakeVisible(chordDisplay_);
+    
+    // Add piano keyboard (full 88 keys)
+    pianoKeyboard_.setKeyRange(21, 108);  // A0 to C8
+    pianoKeyboard_.setPressedWhiteKeyColour(juce::Colour(0xff00ccff));
+    pianoKeyboard_.setPressedBlackKeyColour(juce::Colour(0xff0088bb));
+    addAndMakeVisible(pianoKeyboard_);
     
     // Start timer for UI updates (30 Hz)
     startTimerHz(30);
@@ -45,6 +51,10 @@ void MidiChordDetectorAudioProcessorEditor::resized()
     // Reserve space for title bar
     bounds.removeFromTop(50);
     
+    // Reserve space for piano keyboard at bottom
+    auto keyboardArea = bounds.removeFromBottom(120);
+    pianoKeyboard_.setBounds(keyboardArea.reduced(10));
+    
     // Chord display takes remaining space
     chordDisplay_.setBounds(bounds.reduced(10));
 }
@@ -58,4 +68,20 @@ void MidiChordDetectorAudioProcessorEditor::timerCallback()
     // Check MIDI activity
     bool hasMidi = audioProcessor.hasMidiActivity();
     chordDisplay_.setMidiActivity(hasMidi);
+    
+    // Update piano keyboard with current notes
+    auto currentNotes = audioProcessor.getCurrentNotes();
+    
+    // First clear all keys, then set pressed ones
+    // (More efficient than tracking state changes)
+    static std::vector<int> previousNotes;
+    if (currentNotes != previousNotes)
+    {
+        pianoKeyboard_.clearAllKeys();
+        for (int note : currentNotes)
+        {
+            pianoKeyboard_.setKeyState(note, true);
+        }
+        previousNotes = currentNotes;
+    }
 }
