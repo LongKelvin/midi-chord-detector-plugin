@@ -79,8 +79,9 @@ target_sources(MidiChordDetector
         Source/chord_detection/detector/VoicingAnalyzer.cpp
         Source/chord_detection/detector/ChordFormatter.cpp
         Source/chord_detection/detector/NoteUtils.cpp
-        # UI components
+        # UI components (shared between plugin and standalone)
         Source/ui/ChordDisplayComponent.cpp
+        Source/ui/PianoKeyboardView.cpp
 )
 
 # Compile definitions
@@ -134,6 +135,8 @@ target_sources(MidiChordDetectorStandalone
         Source/chord_detection/detector/VoicingAnalyzer.cpp
         Source/chord_detection/detector/ChordFormatter.cpp
         Source/chord_detection/detector/NoteUtils.cpp
+        # UI components (shared between plugin and standalone)
+        Source/ui/PianoKeyboardView.cpp
 )
 
 # Compile definitions for standalone

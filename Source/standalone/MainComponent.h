@@ -17,6 +17,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "../chord_detection/api/JuceChordDetector.h"
+#include "../ui/PianoKeyboardView.h"
 
 //==============================================================================
 class MainComponent : public juce::Component,
@@ -89,6 +90,9 @@ private:
     juce::Label notesLabel;
     juce::Label activeNotesLabel;
     juce::Label pitchClassLabel;
+    
+    // Piano keyboard view (modular component)
+    PianoKeyboardView pianoKeyboard;
     
     // Debug section
     juce::Label debugLabel;

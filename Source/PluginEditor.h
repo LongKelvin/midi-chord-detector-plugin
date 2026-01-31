@@ -4,6 +4,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "PluginProcessor.h"
 #include "ui/ChordDisplayComponent.h"
+#include "ui/PianoKeyboardView.h"
 
 //==============================================================================
 /**
@@ -42,6 +43,7 @@ private:
     
     // UI components
     ChordDisplayComponent chordDisplay_;
+    PianoKeyboardView pianoKeyboard_;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiChordDetectorAudioProcessorEditor)
 };

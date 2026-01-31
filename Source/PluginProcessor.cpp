@@ -219,7 +219,10 @@ bool MidiChordDetectorAudioProcessor::hasMidiActivity() const
 {
     return midiActivityFlag_.exchange(false, std::memory_order_acq_rel);
 }
-
+std::vector<int> MidiChordDetectorAudioProcessor::getCurrentNotes() const
+{
+    return chordDetector_.getCurrentNotes();
+}
 void MidiChordDetectorAudioProcessor::setSlashChordMode(ChordDetection::SlashChordMode mode)
 {
     chordDetector_.setSlashChordMode(mode);
