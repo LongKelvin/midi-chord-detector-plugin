@@ -87,11 +87,13 @@ void initializePatterns(std::map<std::string, ChordPattern>& patterns) {
     // ========================================================================
     
     patterns["major6"] = ChordPattern(
-        {0, 4, 7, 9}, 105, {0, 4, 9}, {7}, {4, 9}, "{root}6", "major"
+        {0, 4, 7, 9}, 112, {0, 4, 9}, {7}, {4, 9}, "{root}6", "major"
     );
     
+    // Minor 6 - INCREASED score to better compete with half-diminished7
+    // The contextual bonus will further boost when ♭3+6 combination is present
     patterns["minor6"] = ChordPattern(
-        {0, 3, 7, 9}, 105, {0, 3, 9}, {7}, {3, 9}, "{root}m6", "minor"
+        {0, 3, 7, 9}, 115, {0, 3, 9}, {7}, {3, 9}, "{root}m6", "minor"
     );
     
     patterns["6/9"] = ChordPattern(
@@ -163,23 +165,39 @@ void initializePatterns(std::map<std::string, ChordPattern>& patterns) {
     );
     
     // ========================================================================
-    // THIRTEENTH CHORDS
+    // THIRTEENTH CHORDS (INCREASED BASE SCORES)
+    // These are specific chords - should score higher than 9ths
     // ========================================================================
     
     patterns["major13"] = ChordPattern(
-        {0, 4, 7, 11, 14, 21}, 135, {0, 4, 11, 21}, {7, 14}, {4, 11, 21}, "{root}maj13", "major"
+        {0, 4, 7, 11, 14, 21}, 145, {0, 4, 11, 21}, {7, 14, 17}, {4, 11, 21}, "{root}maj13", "major"
+    );
+    
+    // Shell voicing for major 13 (just the essentials: root, 3, maj7, 13)
+    patterns["major13-shell"] = ChordPattern(
+        {0, 4, 11, 21}, 140, {0, 4, 11, 21}, {}, {4, 11, 21}, "{root}maj13", "major"
+    );
+    
+    // Sometimes 13 is played in reduced octave as 9 (A above C = 9 semitones)
+    patterns["major13-reduced"] = ChordPattern(
+        {0, 4, 7, 9, 11}, 140, {0, 4, 9, 11}, {7}, {4, 9, 11}, "{root}maj13", "major"
     );
     
     patterns["minor13"] = ChordPattern(
-        {0, 3, 7, 10, 14, 21}, 135, {0, 3, 10, 21}, {7, 14}, {3, 10, 21}, "{root}m13", "minor"
+        {0, 3, 7, 10, 14, 21}, 145, {0, 3, 10, 21}, {7, 14}, {3, 10, 21}, "{root}m13", "minor"
     );
     
     patterns["dominant13"] = ChordPattern(
-        {0, 4, 7, 10, 14, 21}, 135, {0, 4, 10, 21}, {7, 14}, {4, 10, 21}, "{root}13", "dominant"
+        {0, 4, 7, 10, 14, 21}, 145, {0, 4, 10, 21}, {7, 14, 17}, {4, 10, 21}, "{root}13", "dominant"
+    );
+    
+    // Dominant 13 shell voicing
+    patterns["dominant13-shell"] = ChordPattern(
+        {0, 4, 10, 21}, 140, {0, 4, 10, 21}, {}, {4, 10, 21}, "{root}13", "dominant"
     );
     
     patterns["dominant13#11"] = ChordPattern(
-        {0, 4, 7, 10, 18, 21}, 135, {0, 4, 10, 18, 21}, {7}, {4, 10, 18, 21}, "{root}13♯11", "dominant"
+        {0, 4, 7, 10, 18, 21}, 145, {0, 4, 10, 18, 21}, {7}, {4, 10, 18, 21}, "{root}13♯11", "dominant"
     );
     
     patterns["dominant7b13"] = ChordPattern(
@@ -203,7 +221,7 @@ void initializePatterns(std::map<std::string, ChordPattern>& patterns) {
     );
     
     patterns["dominant7#5"] = ChordPattern(
-        {0, 4, 8, 10}, 118, {0, 4, 8, 10}, {}, {4, 8, 10}, "{root}7♯5", "dominant"
+        {0, 4, 8, 10}, 122, {0, 4, 10}, {}, {4, 8, 10}, "{root}7♯5", "dominant"
     );
     
     patterns["dominant7b5b9"] = ChordPattern(
@@ -218,8 +236,10 @@ void initializePatterns(std::map<std::string, ChordPattern>& patterns) {
         {0, 4, 6, 10, 15}, 122, {0, 4, 6, 10, 15}, {}, {4, 6, 10, 15}, "{root}7♭5♯9", "dominant"
     );
     
+    // IMPORTANT: E7#5#9 and similar altered dominants
+    // Required: root, 3rd, ♭7 only - the alterations are what define it
     patterns["dominant7#5#9"] = ChordPattern(
-        {0, 4, 8, 10, 15}, 122, {0, 4, 8, 10, 15}, {}, {4, 8, 10, 15}, "{root}7♯5♯9", "dominant"
+        {0, 4, 8, 10, 15}, 130, {0, 4, 10}, {7}, {4, 8, 10, 15}, "{root}7♯5♯9", "dominant"
     );
     
     patterns["altered"] = ChordPattern(
@@ -292,6 +312,59 @@ void initializePatterns(std::map<std::string, ChordPattern>& patterns) {
     
     patterns["quartal-7"] = ChordPattern(
         {0, 5, 10, 15}, 95, {0, 5, 10, 15}, {}, {5, 10, 15}, "{root}quartal7", "quartal"
+    );
+    
+    // ========================================================================
+    // SHELL VOICINGS (3rd + 7th only, common in jazz)
+    // These have lower base scores since they're incomplete voicings
+    // ========================================================================
+    
+    patterns["shell-major7"] = ChordPattern(
+        {0, 4, 11}, 85, {0, 4, 11}, {7}, {4, 11}, "{root}maj7(shell)", "major"
+    );
+    
+    patterns["shell-minor7"] = ChordPattern(
+        {0, 3, 10}, 85, {0, 3, 10}, {7}, {3, 10}, "{root}m7(shell)", "minor"
+    );
+    
+    patterns["shell-dominant7"] = ChordPattern(
+        {0, 4, 10}, 85, {0, 4, 10}, {7}, {4, 10}, "{root}7(shell)", "dominant"
+    );
+    
+    // ========================================================================
+    // ROOTLESS VOICINGS (common jazz voicings without root)
+    // ========================================================================
+    
+    // Type A rootless voicing: 3-5-7-9 (no root)
+    patterns["rootless-major9-A"] = ChordPattern(
+        {4, 7, 11, 14}, 80, {4, 11, 14}, {7}, {4, 11, 14}, "{root}maj9(rootless)", "major"
+    );
+    
+    patterns["rootless-minor9-A"] = ChordPattern(
+        {3, 7, 10, 14}, 80, {3, 10, 14}, {7}, {3, 10, 14}, "{root}m9(rootless)", "minor"
+    );
+    
+    patterns["rootless-dom9-A"] = ChordPattern(
+        {4, 7, 10, 14}, 80, {4, 10, 14}, {7}, {4, 10, 14}, "{root}9(rootless)", "dominant"
+    );
+    
+    // Type B rootless voicing: 7-9-3-5
+    patterns["rootless-major9-B"] = ChordPattern(
+        {11, 14, 4, 7}, 80, {4, 11, 14}, {7}, {4, 11, 14}, "{root}maj9(rootless)", "major"
+    );
+    
+    // ========================================================================
+    // ADDITIONAL ALTERED DOMINANTS (for chords like E7#5#9)
+    // ========================================================================
+    
+    // These patterns allow partial matches with optional intervals
+    patterns["dominant7#5#9-partial"] = ChordPattern(
+        {0, 4, 8, 10, 15}, 120, {0, 4, 10}, {8, 15}, {4, 8, 10, 15}, "{root}7♯5♯9", "dominant"
+    );
+    
+    // Alt chord with more flexible matching
+    patterns["altered-flex"] = ChordPattern(
+        {0, 4, 10}, 115, {0, 4, 10}, {6, 8, 13, 15, 20}, {4, 10}, "{root}7alt", "dominant"
     );
 }
 

@@ -8,8 +8,32 @@
 #include "ChordTypes.h"
 #include <vector>
 #include <string>
+#include <memory>
 
 namespace ChordDetection {
+
+// Forward declaration for alternatives
+struct ChordCandidate;
+
+/**
+ * Lightweight alternative chord interpretation.
+ * Used to show other possible chords for ambiguous pitch class sets.
+ */
+struct AlternativeChord {
+    std::string chordName;      // Full display name (e.g., "Am7")
+    std::string rootName;       // Root note name (e.g., "A")
+    std::string chordType;      // Pattern type key (e.g., "minor7")
+    std::string relationship;   // Relationship to main chord (e.g., "Relative minor", "Enharmonic")
+    float score = 0.0f;         // Detection score
+    float confidence = 0.0f;    // Normalized confidence
+    
+    AlternativeChord() = default;
+    AlternativeChord(const std::string& name, const std::string& root, 
+                     const std::string& type, const std::string& rel,
+                     float s, float c)
+        : chordName(name), rootName(root), chordType(type), 
+          relationship(rel), score(s), confidence(c) {}
+};
 
 /**
  * Result of chord detection - contains all analysis data.
@@ -55,6 +79,19 @@ struct ChordCandidate {
     
     /// Voicing classification
     VoicingType voicingType = VoicingType::Unknown;
+    
+    // ========================================================================
+    // ALTERNATIVE INTERPRETATIONS
+    // ========================================================================
+    
+    /// Alternative chord interpretations (for ambiguous pitch class sets)
+    std::vector<AlternativeChord> alternatives;
+    
+    /// Whether this chord has known ambiguous interpretations
+    bool isAmbiguous = false;
+    
+    /// Similarity score to best match (0.0 = unique, 1.0 = highly ambiguous)
+    float ambiguityScore = 0.0f;
     
     // ========================================================================
     // NOTE INFORMATION
@@ -115,6 +152,16 @@ struct ChordCandidate {
     /// Check if confidence is low (<= 60%)
     [[nodiscard]] bool isLowConfidence() const noexcept {
         return confidence <= 0.6f;
+    }
+    
+    /// Check if there are alternative interpretations
+    [[nodiscard]] bool hasAlternatives() const noexcept {
+        return !alternatives.empty();
+    }
+    
+    /// Get number of alternative interpretations
+    [[nodiscard]] size_t alternativeCount() const noexcept {
+        return alternatives.size();
     }
 };
 

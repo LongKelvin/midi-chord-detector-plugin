@@ -17,6 +17,9 @@ MainComponent::MainComponent()
 {
     setSize (800, 700);
     
+    // Pre-allocate log buffer to avoid reallocations
+    logMessages.reserve(MAX_LOG_LINES);
+    
     // Configure the chord detector with defaults
     chordDetector.setMinimumNotes(2);
     chordDetector.setSlashChordMode(ChordDetection::SlashChordMode::Auto);
@@ -78,6 +81,12 @@ MainComponent::MainComponent()
     bassNoteLabel.setFont (juce::Font (16.0f));
     bassNoteLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (bassNoteLabel);
+    
+    alternativesLabel.setText ("", juce::dontSendNotification);
+    alternativesLabel.setFont (juce::Font (12.0f));
+    alternativesLabel.setJustificationType (juce::Justification::centred);
+    alternativesLabel.setColour (juce::Label::textColourId, juce::Colour (0xff66aacc));  // Light blue
+    addAndMakeVisible (alternativesLabel);
     
     //==========================================================================
     // Active notes section
@@ -190,7 +199,10 @@ void MainComponent::resized()
     auto infoRow = bounds.removeFromTop (25);
     confidenceLabel.setBounds (infoRow.removeFromLeft (infoRow.getWidth() / 2));
     bassNoteLabel.setBounds (infoRow);
-    bounds.removeFromTop (15); // Spacing
+    
+    // Alternatives row
+    alternativesLabel.setBounds (bounds.removeFromTop (20));
+    bounds.removeFromTop (10); // Spacing
     
     // Active notes section
     notesLabel.setBounds (bounds.removeFromTop (25));
@@ -234,8 +246,13 @@ void MainComponent::timerCallback()
             chordNameLabel.setText (chordName, juce::dontSendNotification);
             chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::cyan);
             
-            confidenceLabel.setText ("Confidence: " + juce::String (chord->confidence * 100.0f, 1) + "%", 
-                                     juce::dontSendNotification);
+            // Show confidence with ambiguity indicator
+            juce::String confStr = "Confidence: " + juce::String (chord->confidence * 100.0f, 1) + "%";
+            if (chord->isAmbiguous)
+            {
+                confStr += " (ambiguous)";
+            }
+            confidenceLabel.setText (confStr, juce::dontSendNotification);
             
             if (!chord->pitchClasses.empty())
             {
@@ -247,6 +264,26 @@ void MainComponent::timerCallback()
             {
                 bassNoteLabel.setText ("Bass: --", juce::dontSendNotification);
             }
+            
+            // Update alternatives display
+            if (chord->hasAlternatives())
+            {
+                juce::StringArray altStrings;
+                for (const auto& alt : chord->alternatives)
+                {
+                    juce::String altStr = juce::String (alt.chordName);
+                    if (!alt.relationship.empty())
+                    {
+                        altStr += " (" + juce::String (alt.relationship) + ")";
+                    }
+                    altStrings.add (altStr);
+                }
+                alternativesLabel.setText ("Also: " + altStrings.joinIntoString (" | "), juce::dontSendNotification);
+            }
+            else
+            {
+                alternativesLabel.setText ("", juce::dontSendNotification);
+            }
         }
         else
         {
@@ -254,6 +291,7 @@ void MainComponent::timerCallback()
             chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::grey);
             confidenceLabel.setText ("Confidence: --", juce::dontSendNotification);
             bassNoteLabel.setText ("Bass: --", juce::dontSendNotification);
+            alternativesLabel.setText ("", juce::dontSendNotification);
         }
         
         // Update active notes display
@@ -432,18 +470,42 @@ void MainComponent::addLogMessage (const juce::String& message)
     
     {
         juce::ScopedLock sl (logLock);
-        logMessages.push_back (logLine);
         
-        // Trim old messages
-        while (logMessages.size() > MAX_LOG_LINES)
-            logMessages.erase (logMessages.begin());
+        // Use circular buffer pattern for O(1) insertion
+        if (logMessages.size() < MAX_LOG_LINES)
+        {
+            logMessages.push_back (logLine);
+        }
+        else
+        {
+            // Replace oldest entry at logWriteIndex_ position
+            logMessages[logWriteIndex_] = logLine;
+        }
+        logWriteIndex_ = (logWriteIndex_ + 1) % MAX_LOG_LINES;
     }
     
     // Update UI (must be on message thread)
-    juce::MessageManager::callAsync ([this, logLine]() {
-        logDisplay.moveCaretToEnd();
-        logDisplay.insertTextAtCaret (logLine + "\n");
-    });
+    // Throttle UI updates to prevent overwhelming the text editor
+    auto now = juce::Time::getMillisecondCounterHiRes();
+    if (now - lastLogUpdateTime_ > 50.0) // Max 20 updates per second
+    {
+        lastLogUpdateTime_ = now;
+        juce::MessageManager::callAsync ([this, logLine]() {
+            // Trim text editor if it gets too long to prevent unbounded growth
+            if (logDisplay.getText().length() > MAX_LOG_LINES * 100)
+            {
+                auto text = logDisplay.getText();
+                // Keep only the last half
+                int startPos = text.length() / 2;
+                while (startPos < text.length() && text[startPos] != '\n')
+                    ++startPos;
+                if (startPos < text.length())
+                    logDisplay.setText(text.substring(startPos + 1));
+            }
+            logDisplay.moveCaretToEnd();
+            logDisplay.insertTextAtCaret (logLine + "\n");
+        });
+    }
 }
 
 void MainComponent::logChordDetection (const std::shared_ptr<ChordDetection::ChordCandidate>& chord)

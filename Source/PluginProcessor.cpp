@@ -126,8 +126,8 @@ void MidiChordDetectorAudioProcessor::processBlock (juce::AudioBuffer<float>& bu
     // Clear audio buffers (we don't process audio, only MIDI)
     buffer.clear();
     
-    // Copy incoming MIDI to preserve for output (explicit pass-through for host compatibility)
-    juce::MidiBuffer processedMidi;
+    // Reuse pre-allocated buffer for real-time safety (no heap allocation)
+    preallocatedMidiBuffer_.clear();
     
     // Track if chord changed this block
     bool chordMayHaveChanged = false;
@@ -151,7 +151,7 @@ void MidiChordDetectorAudioProcessor::processBlock (juce::AudioBuffer<float>& bu
         }
         
         // Add message to output buffer (explicit pass-through)
-        processedMidi.addEvent(message, samplePosition);
+        preallocatedMidiBuffer_.addEvent(message, samplePosition);
     }
     
     // Publish chord result if notes changed
@@ -162,7 +162,7 @@ void MidiChordDetectorAudioProcessor::processBlock (juce::AudioBuffer<float>& bu
     }
     
     // Swap the processed MIDI buffer to output
-    midiMessages.swapWith(processedMidi);
+    midiMessages.swapWith(preallocatedMidiBuffer_);
 }
 
 void MidiChordDetectorAudioProcessor::processMidiMessage(const juce::MidiMessage& message)

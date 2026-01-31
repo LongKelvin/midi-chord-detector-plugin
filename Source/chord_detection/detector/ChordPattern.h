@@ -46,6 +46,9 @@ struct ChordPattern {
     /// Chord quality category (e.g., "major", "minor", "dominant")
     std::string quality;
     
+    /// Chord type key (e.g., "major6", "minor7") - used for disambiguation
+    std::string chordType;
+    
     // ========================================================================
     // CONSTRUCTORS
     // ========================================================================
@@ -58,7 +61,8 @@ struct ChordPattern {
                  std::vector<int> optional_,
                  std::vector<int> important_,
                  std::string display_,
-                 std::string quality_)
+                 std::string quality_,
+                 std::string type_ = "")
         : intervals(std::move(intervals_))
         , baseScore(baseScore_)
         , required(std::move(required_))
@@ -66,6 +70,7 @@ struct ChordPattern {
         , importantIntervals(std::move(important_))
         , display(std::move(display_))
         , quality(std::move(quality_))
+        , chordType(std::move(type_))
     {}
     
     // ========================================================================

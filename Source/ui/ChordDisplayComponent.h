@@ -12,6 +12,7 @@
  * - Chord quality ("major", "dominant", etc.)
  * - Position/inversion type
  * - Confidence score
+ * - Alternative interpretations (if ambiguous)
  * 
  * Design:
  * - Dark background with light text
@@ -46,14 +47,17 @@ private:
     
     juce::Font chordNameFont_;
     juce::Font detailFont_;
+    juce::Font alternativeFont_;
     
     // Cached strings to avoid allocations in paint()
     juce::String chordNameString_;
     juce::String descriptionString_;
     juce::String inversionString_;
     juce::String confidenceString_;
+    juce::String alternativesString_;
     
     bool midiActivity_;
+    bool hasAlternatives_;
     
     void updateDisplayStrings();
     

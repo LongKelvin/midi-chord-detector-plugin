@@ -130,7 +130,13 @@ public:
     /**
      * Clear chord history (context tracking)
      */
-    void clearHistory() noexcept { chordHistory_.clear(); }
+    void clearHistory() noexcept { 
+        for (auto& entry : chordHistory_) {
+            entry.reset();
+        }
+        historyWriteIndex_ = 0;
+        historySize_ = 0;
+    }
     
 private:
     // ========================================================================
@@ -152,8 +158,17 @@ private:
     std::map<std::string, ChordPattern> chordPatterns_;
     std::map<std::vector<int>, std::vector<std::string>> intervalIndex_;
     
-    // Context tracking (optional)
+    // Context tracking (optional) - using circular buffer pattern for O(1) operations
     std::vector<std::shared_ptr<ChordCandidate>> chordHistory_;
+    size_t historyWriteIndex_ = 0;  // Circular buffer write position
+    size_t historySize_ = 0;        // Current number of items in history
+    
+    // Pre-allocated working buffers to avoid allocations in detectChord()
+    mutable std::vector<int> workingSortedNotes_;
+    mutable std::vector<int> workingPitchClasses_;
+    mutable std::vector<int> workingUniquePitchClasses_;
+    mutable std::vector<int> workingIntervals_;
+    mutable std::vector<std::shared_ptr<ChordCandidate>> workingCandidates_;
 };
 
 // ============================================================================

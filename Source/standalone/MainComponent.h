@@ -83,6 +83,7 @@ private:
     juce::Label chordNameLabel;
     juce::Label confidenceLabel;
     juce::Label bassNoteLabel;
+    juce::Label alternativesLabel;  // Alternative chord interpretations
     
     // Active notes section
     juce::Label notesLabel;
@@ -103,6 +104,8 @@ private:
     // State
     std::vector<juce::String> logMessages;
     static constexpr int MAX_LOG_LINES = 500;
+    size_t logWriteIndex_ = 0;           // Circular buffer write position for logs
+    double lastLogUpdateTime_ = 0.0;     // Throttle UI updates
     bool isLoggingEnabled = true;
     bool isMidiLoggingEnabled = true;
     

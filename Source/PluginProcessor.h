@@ -120,6 +120,9 @@ private:
     void processMidiMessage(const juce::MidiMessage& message);
     void publishChordResult(const std::shared_ptr<ChordDetection::ChordCandidate>& chord);
     
+    // Pre-allocated MIDI buffer for real-time safety (avoid heap allocation in processBlock)
+    juce::MidiBuffer preallocatedMidiBuffer_;
+    
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiChordDetectorAudioProcessor)
 };
