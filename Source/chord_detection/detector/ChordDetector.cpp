@@ -6,6 +6,7 @@
 
 #include "ChordDetector.h"
 #include <algorithm>
+#include <array>
 #include <set>
 
 namespace ChordDetection {
@@ -34,28 +35,65 @@ std::shared_ptr<ChordCandidate> ChordDetector::resolveAmbiguity(
     const std::vector<std::shared_ptr<ChordCandidate>>& candidates,
     int bassPitchClass) const
 {
-    (void)bassPitchClass;  // Reserved for future use
-    
     if (candidates.empty()) {
         return nullptr;
     }
-    
+
     if (candidates.size() < 2) {
         return candidates[0];
     }
-    
-    auto top = candidates[0];
-    auto second = candidates[1];
-    
-    // Special case: minor6 vs relative major
-    if (top->chordType == "minor6" && second->chordType == "minor") {
+
+    auto& top    = candidates[0];
+    auto& second = candidates[1];
+
+    // Large score gap — no real ambiguity, trust the score.
+    if (top->score - second->score > 40.0f) {
         return top;
     }
-    if (second->chordType == "minor6" && top->chordType == "minor") {
-        return second;
+
+    const auto& typeA = top->chordType;
+    const auto& typeB = second->chordType;
+
+    // -------------------------------------------------------------------------
+    // Case 1: C6 vs Am7 — same four notes, different root interpretation.
+    //   C major6 : {C,E,G,A} — root=C, intervals={0,4,7,9}
+    //   A minor7 : {A,C,E,G} — root=A, intervals={0,3,7,10}
+    // Disambiguation: whichever root matches the bass wins.
+    // -------------------------------------------------------------------------
+    const bool isMajor6vsMinor7 = (typeA == "major6" && typeB == "minor7") ||
+                                   (typeA == "minor7" && typeB == "major6");
+    if (isMajor6vsMinor7) {
+        if (top->root    == bassPitchClass) return top;
+        if (second->root == bassPitchClass) return second;
+        // No bass clue: prefer major6 (more common in root-position context).
+        return (typeA == "major6") ? top : second;
     }
-    
-    // Default: return highest scored
+
+    // -------------------------------------------------------------------------
+    // Case 2: Diminished7 enharmonics — all four inversions of a dim7 chord
+    // share the same four pitch classes (e.g., Bdim7 = Ddim7 = Fdim7 = Abdim7).
+    // Disambiguation: whichever root is the bass note wins.
+    // -------------------------------------------------------------------------
+    if (typeA == "diminished7" && typeB == "diminished7") {
+        if (top->root    == bassPitchClass) return top;
+        if (second->root == bassPitchClass) return second;
+        return top; // fall back to highest score
+    }
+
+    // -------------------------------------------------------------------------
+    // Case 3: Minor6 vs minor — e.g., Am6 {A,C,E,F#} vs Am {A,C,E}.
+    // If the minor6 root is the bass, prefer it (strong evidence).
+    // Otherwise trust the score.
+    // -------------------------------------------------------------------------
+    const bool isMinor6vsMinor = (typeA == "minor6" && typeB == "minor") ||
+                                  (typeA == "minor"  && typeB == "minor6");
+    if (isMinor6vsMinor) {
+        auto& minor6cand = (typeA == "minor6") ? top : second;
+        if (minor6cand->root == bassPitchClass) return minor6cand;
+        return top; // trust score
+    }
+
+    // Default: highest score wins.
     return top;
 }
 
@@ -106,8 +144,9 @@ std::shared_ptr<ChordCandidate> ChordDetector::detectChord(
             int interval = NoteUtils::intervalBetween(potentialRoot, pc);
             intervals.push_back(interval);
             
-            // Extended intervals for extended chords
-            if (sortedNotes.size() > 3) {
+            // Extended intervals for extended chords — but skip interval==0
+            // (root): adding 0+12=12 would double-count the root and inflate scores.
+            if (sortedNotes.size() > 3 && interval != 0) {
                 int extendedInterval = interval + kPitchClassCount;
                 if (extendedInterval <= kMaxIntervals) {
                     intervals.push_back(extendedInterval);
@@ -219,7 +258,97 @@ std::shared_ptr<ChordCandidate> ChordDetector::detectChord(
             }
         }
     }
-    
+
+    // =========================================================================
+    // ROOTLESS CANDIDATE SEARCH 
+    // Try each pitch class NOT present in the played notes as a virtual root.
+    // Jazz players routinely omit the root; scoring against absent roots with
+    // VoicingType::Rootless gives +10 bonus and waives the –40 no-root penalty.
+    // =========================================================================
+    {
+        // Build a fast membership table (stack-allocated, no heap).
+        std::array<bool, kPitchClassCount> present{};
+        for (int pc : uniquePitchClasses) {
+            present[static_cast<size_t>(pc)] = true;
+        }
+
+        for (int virtualRoot = 0; virtualRoot < kPitchClassCount; ++virtualRoot) {
+            if (present[static_cast<size_t>(virtualRoot)]) continue; // skip present roots
+
+            // Intervals from the absent virtual root — note 0 is NOT added because
+            // the root itself is not played.
+            std::vector<int> intervals;
+            intervals.reserve(uniquePitchClasses.size() * 2);
+            for (int pc : uniquePitchClasses) {
+                int interval = NoteUtils::intervalBetween(virtualRoot, pc);
+                intervals.push_back(interval);
+                // Extended intervals (skip interval==0 guard is implicit since
+                // root is absent and intervalBetween never produces 0 here).
+                if (sortedNotes.size() > 3) {
+                    int ext = interval + kPitchClassCount;
+                    if (ext <= kMaxIntervals) {
+                        intervals.push_back(ext);
+                    }
+                }
+            }
+
+            std::sort(intervals.begin(), intervals.end());
+            auto lastRootless = std::unique(intervals.begin(), intervals.end());
+            intervals.erase(lastRootless, intervals.end());
+
+            // Fast lookup first; fall back to full scan.
+            std::vector<std::string> candidateTypes;
+            auto it = intervalIndex_.find(intervals);
+            if (it != intervalIndex_.end()) {
+                candidateTypes = it->second;
+            } else {
+                candidateTypes.reserve(chordPatterns_.size());
+                for (const auto& [type, _] : chordPatterns_) {
+                    candidateTypes.push_back(type);
+                }
+            }
+
+            for (const std::string& chordType : candidateTypes) {
+                const ChordPattern& pattern = chordPatterns_.at(chordType);
+
+                float score = ChordScoring::computeScore(
+                    intervals, pattern, bassPitchClass, virtualRoot,
+                    VoicingType::Rootless);
+
+                if (score > kMinimumScoreThreshold) {
+                    auto candidate = std::make_shared<ChordCandidate>();
+                    candidate->root      = virtualRoot;
+                    candidate->rootName  = NoteUtils::getNoteName(virtualRoot);
+                    candidate->chordType = chordType;
+                    candidate->pattern   = pattern.intervals;
+                    candidate->intervals = intervals;
+                    candidate->score     = score;
+                    candidate->voicingType = VoicingType::Rootless;
+                    candidate->noteNumbers  = sortedNotes;
+                    candidate->pitchClasses = uniquePitchClasses;
+
+                    // Position: rootless with slash notation showing actual bass.
+                    std::string bassName = NoteUtils::getNoteName(bassPitchClass);
+                    candidate->position  = "Rootless/" + bassName;
+                    candidate->chordName = NoteUtils::replaceRootTemplate(
+                        pattern.display, candidate->rootName)
+                        + "/" + bassName;
+
+                    candidate->degrees.reserve(intervals.size());
+                    for (int interval : intervals) {
+                        candidate->degrees.push_back(NoteUtils::getDegreeName(interval));
+                    }
+                    candidate->noteNames.reserve(pitchClasses.size());
+                    for (int pc : pitchClasses) {
+                        candidate->noteNames.push_back(NoteUtils::getNoteName(pc));
+                    }
+
+                    candidates.push_back(candidate);
+                }
+            }
+        }
+    }
+
     if (candidates.empty()) {
         return nullptr;
     }
