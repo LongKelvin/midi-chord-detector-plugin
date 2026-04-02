@@ -60,9 +60,9 @@ float computeScore(
     }
     score += static_cast<float>(optionalCount) * 10.0f;
     
-    // Root position bonus (reduced to avoid favoring root over correct chord)
+    // Root position bonus — strengthened to be meaningful relative to score range.
     if (bassPitchClass == potentialRoot) {
-        score += 15.0f;
+        score += 25.0f;
     }
     
     // Important interval bonus (3rd and 7th define chord quality)
@@ -99,7 +99,9 @@ float computeScore(
             extraCount++;
         }
     }
-    score -= static_cast<float>(extraCount) * 8.0f;
+    // Jazz extensions (9, 11, 13) should not be treated as scoring errors.
+    // Halved penalty vs. original to be less aggressive for complex chords.
+    score -= static_cast<float>(extraCount) * 4.0f;
     
     // Voicing considerations
     if (voicingType == VoicingType::Rootless) {

@@ -111,7 +111,7 @@ private:
     // Audio thread writes, UI thread reads
     std::atomic<ChordDetection::ChordCandidate*> currentChordPtr_;
     std::shared_ptr<ChordDetection::ChordCandidate> chordBuffer_[2];  // Double buffer
-    int chordBufferIndex_;
+    std::atomic<int> chordBufferIndex_;  // written by audio thread, read by UI thread
     
     mutable std::atomic<bool> newChordAvailable_;  // mutable for hasNewChord() const
     mutable std::atomic<bool> midiActivityFlag_;   // mutable for hasMidiActivity() const

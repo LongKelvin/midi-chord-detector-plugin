@@ -111,9 +111,8 @@ MainComponent::MainComponent()
     addAndMakeVisible (logMidiEvents);
     
     clearLogButton.onClick = [this] {
-        juce::ScopedLock sl (logLock);
-        logMessages.clear();
         logDisplay.clear();
+        logLineCount_ = 0;
     };
     addAndMakeVisible (clearLogButton);
     
@@ -219,111 +218,174 @@ void MainComponent::resized()
 
 void MainComponent::timerCallback()
 {
-    if (chordUpdated.exchange (false))
+    if (!chordUpdated.exchange (false))
+        return;
+
+    // -------------------------------------------------------------------------
+    // Snapshot everything we need under one brief lock.
+    // getCurrentNotes() reads notesBitset_ which is written by the MIDI thread
+    // under midiLock \u2014 we MUST hold the lock here to avoid a data race.
+    // -------------------------------------------------------------------------
+    std::shared_ptr<ChordDetection::ChordCandidate> chord;
+    std::vector<int> notes;
     {
-        // Update chord display
-        std::shared_ptr<ChordDetection::ChordCandidate> chord;
+        juce::ScopedLock sl (midiLock);
+        chord = currentChord;
+        notes = chordDetector.getCurrentNotes();  // safe: we hold midiLock
+    }
+
+    // -------------------------------------------------------------------------
+    // Update chord display (no lock held)
+    // -------------------------------------------------------------------------
+    if (chord)
+    {
+        chordNameLabel.setText (juce::String (chord->chordName), juce::dontSendNotification);
+        chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::cyan);
+
+        confidenceLabel.setText ("Confidence: " + juce::String (chord->confidence * 100.0f, 1) + "%",
+                                 juce::dontSendNotification);
+
+        if (!chord->pitchClasses.empty())
         {
-            juce::ScopedLock sl (midiLock);
-            chord = currentChord;
-        }
-        
-        if (chord)
-        {
-            juce::String chordName = juce::String (chord->chordName);
-            
-            chordNameLabel.setText (chordName, juce::dontSendNotification);
-            chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::cyan);
-            
-            confidenceLabel.setText ("Confidence: " + juce::String (chord->confidence * 100.0f, 1) + "%", 
-                                     juce::dontSendNotification);
-            
-            if (!chord->pitchClasses.empty())
-            {
-                static const char* rootNames[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-                int bassPC = chord->pitchClasses[0];
-                bassNoteLabel.setText ("Bass: " + juce::String (rootNames[bassPC % 12]), juce::dontSendNotification);
-            }
-            else
-            {
-                bassNoteLabel.setText ("Bass: --", juce::dontSendNotification);
-            }
+            static const char* rootNames[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+            int bassPC = chord->pitchClasses[0];
+            bassNoteLabel.setText ("Bass: " + juce::String (rootNames[bassPC % 12]), juce::dontSendNotification);
         }
         else
         {
-            chordNameLabel.setText ("N.C.", juce::dontSendNotification);
-            chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::grey);
-            confidenceLabel.setText ("Confidence: --", juce::dontSendNotification);
             bassNoteLabel.setText ("Bass: --", juce::dontSendNotification);
         }
-        
-        // Update active notes display
-        activeNotesLabel.setText (getActiveNotesString(), juce::dontSendNotification);
-        
-        // Update pitch classes
-        auto notes = chordDetector.getCurrentNotes();
-        std::set<int> pitchClassSet;
-        for (int note : notes)
+    }
+    else
+    {
+        chordNameLabel.setText ("N.C.", juce::dontSendNotification);
+        chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::grey);
+        confidenceLabel.setText ("Confidence: --", juce::dontSendNotification);
+        bassNoteLabel.setText ("Bass: --", juce::dontSendNotification);
+    }
+
+    // -------------------------------------------------------------------------
+    // Build active-notes string from snapshot (no lock, no allocation)
+    // -------------------------------------------------------------------------
+    juce::String activeStr;
+    if (notes.empty())
+    {
+        activeStr = "None";
+    }
+    else
+    {
+        for (size_t i = 0; i < notes.size(); ++i)
         {
-            pitchClassSet.insert(note % 12);
+            if (i > 0) activeStr += ", ";
+            activeStr += noteNumberToName (notes[i]);
         }
-        
-        juce::String pcStr = "Pitch Classes: {";
-        bool first = true;
-        for (int pc : pitchClassSet)
+    }
+    activeNotesLabel.setText (activeStr, juce::dontSendNotification);
+
+    // -------------------------------------------------------------------------
+    // Build pitch-class string using std::bitset<12> \u2014 zero heap allocation.
+    // -------------------------------------------------------------------------
+    std::bitset<12> pcBits;
+    for (int n : notes)
+        pcBits.set (static_cast<size_t> (n % 12));
+
+    juce::String pcStr = "Pitch Classes: {";
+    bool first = true;
+    for (int pc = 0; pc < 12; ++pc)
+    {
+        if (pcBits.test (static_cast<size_t> (pc)))
         {
             if (!first) pcStr += ", ";
-            pcStr += juce::String(pc);
+            pcStr += juce::String (pc);
             first = false;
         }
-        pcStr += "}";
-        pitchClassLabel.setText (pcStr, juce::dontSendNotification);
     }
+    pcStr += "}";
+    pitchClassLabel.setText (pcStr, juce::dontSendNotification);
 }
 
 //==============================================================================
 void MainComponent::handleIncomingMidiMessage (juce::MidiInput* /*source*/, const juce::MidiMessage& message)
 {
-    // Log MIDI message
+    // Log raw MIDI first — no lock needed, logMidiMessage is self-contained.
     if (isMidiLoggingEnabled)
-    {
         logMidiMessage (message);
-    }
-    
-    // Process the message through the chord detector
+
+    bool noteChanged = false;
+    std::shared_ptr<ChordDetection::ChordCandidate> chord;
+
     {
         juce::ScopedLock sl (midiLock);
-        
-        if (message.isNoteOn())
+
+        // -----------------------------------------------------------------------
+        // CC 64 — sustain pedal (mirrors PluginProcessor logic)
+        // -----------------------------------------------------------------------
+        if (message.isController() && message.getControllerNumber() == 64)
         {
-            chordDetector.addNote (message.getNoteNumber());
+            const bool pedalNowDown = (message.getControllerValue() >= 64);
+
+            if (!pedalNowDown && sustainPedalDown_)
+            {
+                // Release: flush all deferred NoteOffs
+                for (int i = 0; i < 128; ++i)
+                    if (sustainedNotes_.test (static_cast<size_t> (i)))
+                        chordDetector.removeNote (i);
+
+                sustainedNotes_.reset();
+                noteChanged = true;
+            }
+
+            sustainPedalDown_ = pedalNowDown;
         }
+        // -----------------------------------------------------------------------
+        // NoteOn — always add, cancel any pending removal for this note
+        // -----------------------------------------------------------------------
+        else if (message.isNoteOn())
+        {
+            sustainedNotes_.reset (static_cast<size_t> (message.getNoteNumber()));
+            chordDetector.addNote (message.getNoteNumber());
+            noteChanged = true;
+        }
+        // -----------------------------------------------------------------------
+        // NoteOff — defer while pedal is held
+        // -----------------------------------------------------------------------
         else if (message.isNoteOff())
         {
-            chordDetector.removeNote (message.getNoteNumber());
+            if (sustainPedalDown_)
+            {
+                sustainedNotes_.set (static_cast<size_t> (message.getNoteNumber()));
+                // Do not remove from detector; hold the display.
+            }
+            else
+            {
+                chordDetector.removeNote (message.getNoteNumber());
+                noteChanged = true;
+            }
         }
-        else if (message.isController() && message.getControllerNumber() == 123)
+        // -----------------------------------------------------------------------
+        // Emergency reset (CC123 / All Notes Off) — ignore pedal state
+        // -----------------------------------------------------------------------
+        else if ((message.isController() && message.getControllerNumber() == 123)
+                 || message.isAllNotesOff() || message.isAllSoundOff())
         {
-            // All notes off
+            sustainedNotes_.reset();
+            sustainPedalDown_ = false;
             chordDetector.clearNotes();
+            noteChanged = true;
         }
-        else if (message.isAllNotesOff() || message.isAllSoundOff())
-        {
-            chordDetector.clearNotes();
-        }
-        
-        // Get current chord
-        currentChord = chordDetector.getCurrentChord();
+
+        if (noteChanged)
+            currentChord = chordDetector.getCurrentChord();
+
+        chord = currentChord;  // local copy, safe to use after lock releases
     }
-    
-    // Log chord detection
-    if (isLoggingEnabled && (message.isNoteOn() || message.isNoteOff()))
-    {
-        juce::ScopedLock sl (midiLock);
-        logChordDetection (currentChord);
-    }
-    
-    chordUpdated = true;
+
+    // Log chord detection outside the lock — no lock inversion risk.
+    if (noteChanged && isLoggingEnabled)
+        logChordDetection (chord);
+
+    if (noteChanged)
+        chordUpdated.store (true, std::memory_order_release);
 }
 
 //==============================================================================
@@ -426,24 +488,23 @@ void MainComponent::closeMidiDevice()
 void MainComponent::addLogMessage (const juce::String& message)
 {
     if (!isLoggingEnabled) return;
-    
+
     auto time = juce::Time::getCurrentTime();
-    juce::String timestamp = time.formatted ("%H:%M:%S.") + juce::String (time.getMilliseconds()).paddedLeft ('0', 3);
-    juce::String logLine = "[" + timestamp + "] " + message;
-    
-    {
-        juce::ScopedLock sl (logLock);
-        logMessages.push_back (logLine);
-        
-        // Trim old messages
-        while (logMessages.size() > MAX_LOG_LINES)
-            logMessages.erase (logMessages.begin());
-    }
-    
-    // Update UI (must be on message thread)
-    juce::MessageManager::callAsync ([this, logLine]() {
+    juce::String line = "[" + time.formatted ("%H:%M:%S.")
+                      + juce::String (time.getMilliseconds()).paddedLeft ('0', 3)
+                      + "] " + message;
+
+    // Post to the message thread — zero blocking on the MIDI callback thread.
+    juce::MessageManager::callAsync ([this, line]() {
+        // Trim the TextEditor when it exceeds the line limit.
+        ++logLineCount_;
+        if (logLineCount_ > MAX_LOG_LINES)
+        {
+            logDisplay.clear();
+            logLineCount_ = 1;
+        }
         logDisplay.moveCaretToEnd();
-        logDisplay.insertTextAtCaret (logLine + "\n");
+        logDisplay.insertTextAtCaret (line + "\n");
     });
 }
 
@@ -509,21 +570,4 @@ juce::String MainComponent::noteNumberToName (int noteNumber) const
     int octave = (noteNumber / 12) - 1;
     int note = noteNumber % 12;
     return juce::String (noteNames[note]) + juce::String (octave);
-}
-
-juce::String MainComponent::getActiveNotesString() const
-{
-    auto notes = chordDetector.getCurrentNotes();
-    
-    if (notes.empty())
-        return "None";
-    
-    juce::String result;
-    for (size_t i = 0; i < notes.size(); i++)
-    {
-        if (i > 0) result += ", ";
-        result += noteNumberToName (notes[i]);
-    }
-    
-    return result;
 }

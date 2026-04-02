@@ -17,6 +17,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "../chord_detection/api/JuceChordDetector.h"
+#include <bitset>
 
 //==============================================================================
 class MainComponent : public juce::Component,
@@ -48,7 +49,6 @@ private:
     
     // Format helpers
     juce::String noteNumberToName (int noteNumber) const;
-    juce::String getActiveNotesString() const;
     
     //==============================================================================
     // Core engine - using new pattern-based detection
@@ -62,9 +62,8 @@ private:
     juce::Array<juce::MidiDeviceInfo> midiDevices;
     int currentDeviceIndex = -1;
     
-    // Thread safety
+    // Thread safety — one lock covers both detector and currentChord
     juce::CriticalSection midiLock;
-    juce::CriticalSection logLock;
     
     //==============================================================================
     // UI Components
@@ -101,10 +100,14 @@ private:
     
     //==============================================================================
     // State
-    std::vector<juce::String> logMessages;
     static constexpr int MAX_LOG_LINES = 500;
+    int logLineCount_ = 0;          // message-thread only, no lock needed
     bool isLoggingEnabled = true;
     bool isMidiLoggingEnabled = true;
+
+    // Sustain pedal — MIDI-thread only (always accessed under midiLock)
+    bool sustainPedalDown_ = false;
+    std::bitset<128> sustainedNotes_;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

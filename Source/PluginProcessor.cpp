@@ -191,23 +191,27 @@ void MidiChordDetectorAudioProcessor::processMidiMessage(const juce::MidiMessage
 
 void MidiChordDetectorAudioProcessor::publishChordResult(const std::shared_ptr<ChordDetection::ChordCandidate>& chord)
 {
-    // Double-buffer technique for lock-free communication
-    // Write to the buffer not currently being read
-    int writeIndex = 1 - chordBufferIndex_;
+    // Double-buffer technique for lock-free communication.
+    // Compute the write index from the current read index atomically so the UI
+    // thread never sees a torn value.
+    int readIndex  = chordBufferIndex_.load(std::memory_order_acquire);
+    int writeIndex = 1 - readIndex;
     chordBuffer_[writeIndex] = chord;
-    
-    // Atomic swap to make new chord available
+
+    // Publish the raw pointer atomically so the UI can validate liveness.
     currentChordPtr_.store(chordBuffer_[writeIndex].get(), std::memory_order_release);
-    chordBufferIndex_ = writeIndex;
-    
+
+    // Flip the buffer index last — this is the commit point seen by UI.
+    chordBufferIndex_.store(writeIndex, std::memory_order_release);
+
     newChordAvailable_.store(true, std::memory_order_release);
 }
 
 std::shared_ptr<ChordDetection::ChordCandidate> MidiChordDetectorAudioProcessor::getCurrentChord() const
 {
-    // Return the current chord from the detector
-    // This is safe because we're returning a shared_ptr copy
-    return chordBuffer_[chordBufferIndex_];
+    // Acquire the current buffer index atomically before reading the shared_ptr.
+    int index = chordBufferIndex_.load(std::memory_order_acquire);
+    return chordBuffer_[index];
 }
 
 bool MidiChordDetectorAudioProcessor::hasNewChord() const
