@@ -52,6 +52,19 @@ endif()
 message(STATUS "Using JUCE from: ${JUCE_DIR}")
 add_subdirectory(${JUCE_DIR} JUCE EXCLUDE_FROM_ALL)
 
+# Override VST3 copy destination so builds work without admin privileges.
+# Defaults to the user-level VST3 folder on Windows ($APPDATA/VST3).
+# Pass -DJUCE_VST3_COPY_DIR_OVERRIDE="C:/Program Files/Common Files/VST3"
+# (as administrator) to install system-wide instead.
+if(WIN32)
+    if(DEFINED JUCE_VST3_COPY_DIR_OVERRIDE)
+        set_property(GLOBAL PROPERTY JUCE_VST3_COPY_DIR "${JUCE_VST3_COPY_DIR_OVERRIDE}")
+    else()
+        set_property(GLOBAL PROPERTY JUCE_VST3_COPY_DIR "$ENV{APPDATA}/VST3")
+    endif()
+    message(STATUS "VST3 copy destination: $<GENEX_EVAL:$<TARGET_PROPERTY:MidiChordDetector,JUCE_VST3_COPY_DIR>>")
+endif()
+
 #===============================================================================
 # VST3 Plugin Target
 #===============================================================================

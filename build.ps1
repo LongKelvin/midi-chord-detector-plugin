@@ -191,10 +191,21 @@ if (-not (Test-Path $BUILD_DIR)) {
 }
 Write-Success "Build directory ready"
 
+# Determine VST3 install destination based on privileges
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator")
+if ($isAdmin) {
+    $vst3CopyDir = "$env:CommonProgramFiles/VST3"
+    Write-ColorOutput "[INFO] Running as Administrator — VST3 will be installed to system folder" "Cyan"
+} else {
+    $vst3CopyDir = "$env:APPDATA/VST3"
+    Write-ColorOutput "[INFO] Running without Administrator rights — VST3 will be installed to user folder: $vst3CopyDir" "Yellow"
+}
+
 # Configure CMake
 Write-Step "Configuring CMake..."
 Write-ColorOutput "JUCE Path: $JUCE_PATH" "Gray"
 Write-ColorOutput "Build Config: $BuildConfig" "Gray"
+Write-ColorOutput "VST3 Copy Dir: $vst3CopyDir" "Gray"
 
 Push-Location $BUILD_DIR
 
@@ -204,6 +215,10 @@ try {
         "-DJUCE_DIR=`"$JUCE_PATH`"",
         "-DCMAKE_BUILD_TYPE=$BuildConfig"
     )
+    # Admin: override to system-wide VST3 folder
+    if ($isAdmin) {
+        $cmakeArgs += "-DJUCE_VST3_COPY_DIR_OVERRIDE=`"$vst3CopyDir`""
+    }
     
     Write-ColorOutput "Running: cmake $($cmakeArgs -join ' ')" "Gray"
     & cmake @cmakeArgs
@@ -242,20 +257,26 @@ Pop-Location
 # Check output
 Write-Step "Verifying build output..."
 
+# Recompute $vst3CopyDir in case it was lost across the try/catch boundary
+if ($null -eq $vst3CopyDir -or $vst3CopyDir -eq "") {
+    $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]"Administrator")
+    $vst3CopyDir = if ($isAdmin) { "$env:CommonProgramFiles/VST3" } else { "$env:APPDATA/VST3" }
+}
+
 $vst3RelativePath = "MidiChordDetector_artefacts\$BuildConfig\VST3\MIDI Chord Detector.vst3"
 $vst3Path = Join-Path $BUILD_DIR $vst3RelativePath
-$systemVst3Path = Join-Path $env:CommonProgramFiles "VST3\MIDI Chord Detector.vst3"
+$installedVst3Path = Join-Path $vst3CopyDir "MIDI Chord Detector.vst3"
 
 if (Test-Path $vst3Path) {
     Write-Success "VST3 plugin built successfully!"
     Write-ColorOutput "Location: $vst3Path" "Gray"
     
-    # Check if copied to system
-    if (Test-Path $systemVst3Path) {
-        Write-Success "Plugin installed to: $systemVst3Path"
+    # Check if copied to install destination
+    if (Test-Path $installedVst3Path) {
+        Write-Success "Plugin installed to: $installedVst3Path"
     } else {
-        Write-Warning-Custom "Plugin not automatically installed to system VST3 folder"
-        Write-ColorOutput "Run as administrator to auto-install, or copy manually" "Yellow"
+        Write-Warning-Custom "Plugin was not copied to: $installedVst3Path"
+        Write-ColorOutput "You can copy it manually from: $vst3Path" "Yellow"
     }
 } else {
     Write-Warning-Custom "VST3 plugin not found at expected location: $vst3Path"
