@@ -41,6 +41,11 @@ public:
      */
     void clearChord();
 
+    /**
+     * Show or hide technical debug panel on the right
+     */
+    void setDebugMode(bool show);
+
 private:
     std::shared_ptr<ChordDetection::ChordCandidate> currentChord_;
     
@@ -54,6 +59,7 @@ private:
     juce::String confidenceString_;
     
     bool midiActivity_;
+    bool showDebugPanel_ = false;
     
     void updateDisplayStrings();
     
