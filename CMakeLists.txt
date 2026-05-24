@@ -66,6 +66,29 @@ if(WIN32)
 endif()
 
 #===============================================================================
+# Binary Resources — Bravura SMuFL font (required by NotationComponent.h)
+#
+# Run once before your first build:
+#   powershell -ExecutionPolicy Bypass -File setup_fonts.ps1
+#
+# build.ps1 calls this automatically; manual download:
+#   https://github.com/steinbergmedia/bravura/releases  →  redist/Bravura.otf
+#===============================================================================
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/fonts/Bravura.otf")
+    message(FATAL_ERROR
+        "Bravura.otf not found.\n"
+        "Run the setup script to download it automatically:\n"
+        "  powershell -ExecutionPolicy Bypass -File setup_fonts.ps1\n"
+        "Or download from: https://github.com/steinbergmedia/bravura/releases\n"
+        "and place the file at: ${CMAKE_CURRENT_SOURCE_DIR}/fonts/Bravura.otf")
+endif()
+
+juce_add_binary_data(BinaryData
+    SOURCES
+        fonts/Bravura.otf
+)
+
+#===============================================================================
 # VST3 Plugin Target
 #===============================================================================
 juce_add_plugin(MidiChordDetector
@@ -113,6 +136,7 @@ target_compile_definitions(MidiChordDetector
 # Link JUCE modules
 target_link_libraries(MidiChordDetector
     PRIVATE
+        BinaryData
         juce::juce_audio_utils
         juce::juce_audio_processors
     PUBLIC
