@@ -179,11 +179,11 @@ private:
     // Appearance
     //==========================================================================
     
-    juce::Colour whiteKeyColour_        = juce::Colour(0xffeeeeee);
-    juce::Colour blackKeyColour_        = juce::Colour(0xff1a1a1a);
-    juce::Colour pressedWhiteKeyColour_ = juce::Colour(0xff00ccff);  // Cyan
-    juce::Colour pressedBlackKeyColour_ = juce::Colour(0xff0088bb);  // Darker cyan
-    juce::Colour keyOutlineColour_      = juce::Colour(0xff333333);
+    juce::Colour whiteKeyColour_        = juce::Colour(0xfff5f6f9);
+    juce::Colour blackKeyColour_        = juce::Colour(0xff1e2025);
+    juce::Colour pressedWhiteKeyColour_ = juce::Colour(0xff00d4ff);  // Vibrant Cyan
+    juce::Colour pressedBlackKeyColour_ = juce::Colour(0xff008ecc);  // Matching blue-cyan
+    juce::Colour keyOutlineColour_      = juce::Colour(0xff121317);
     
     //==========================================================================
     

@@ -249,8 +249,8 @@ void PianoKeyboardView::drawWhiteKeys(juce::Graphics& g)
         if (!pressed)
         {
             juce::ColourGradient gradient(
-                whiteKeyColour_.brighter(0.1f), key.bounds.getX(), key.bounds.getY(),
-                whiteKeyColour_.darker(0.15f), key.bounds.getX(), key.bounds.getBottom(),
+                whiteKeyColour_.brighter(0.04f), key.bounds.getX(), key.bounds.getY(),
+                whiteKeyColour_.darker(0.08f), key.bounds.getX(), key.bounds.getBottom(),
                 false);
             g.setGradientFill(gradient);
             g.fillRect(key.bounds.reduced(1.0f));
@@ -259,11 +259,22 @@ void PianoKeyboardView::drawWhiteKeys(juce::Graphics& g)
         {
             // Pressed key gradient (inverted, appears pushed down)
             juce::ColourGradient gradient(
-                pressedWhiteKeyColour_.darker(0.1f), key.bounds.getX(), key.bounds.getY(),
+                pressedWhiteKeyColour_.withMultipliedAlpha(0.6f).darker(0.3f), key.bounds.getX(), key.bounds.getY(),
                 pressedWhiteKeyColour_.brighter(0.1f), key.bounds.getX(), key.bounds.getBottom(),
                 false);
             g.setGradientFill(gradient);
             g.fillRect(key.bounds.reduced(1.0f));
+        }
+
+        // Draw note names for C keys (octave labels)
+        int pitch = key.midiNote % 12;
+        if (pitch == 0)
+        {
+            juce::String label = "C" + juce::String((key.midiNote / 12) - 1);
+            g.setColour(pressed ? juce::Colours::white : juce::Colour(0xff7c8291));
+            g.setFont(juce::Font(juce::FontOptions().withHeight(9.0f)).boldened());
+            auto labelRect = key.bounds.withTrimmedTop(key.bounds.getHeight() - 14.0f).withTrimmedBottom(2.0f);
+            g.drawText(label, labelRect, juce::Justification::centredBottom, false);
         }
     }
 }
@@ -282,20 +293,31 @@ void PianoKeyboardView::drawBlackKeys(juce::Graphics& g)
         if (!pressed)
         {
             // Highlight on top
-            g.setColour(juce::Colours::white.withAlpha(0.1f));
+            g.setColour(juce::Colours::white.withAlpha(0.12f));
             auto highlightRect = key.bounds.withHeight(3.0f);
             g.fillRoundedRectangle(highlightRect, 1.0f);
             
-            // Shadow
-            g.setColour(juce::Colours::black.withAlpha(0.3f));
-            auto shadowRect = key.bounds.withTrimmedTop(key.bounds.getHeight() - 4.0f);
-            g.fillRoundedRectangle(shadowRect, 1.0f);
+            // Subtle body gradient
+            juce::ColourGradient gradient(
+                blackKeyColour_.brighter(0.1f), key.bounds.getX(), key.bounds.getY(),
+                blackKeyColour_.darker(0.4f), key.bounds.getX(), key.bounds.getBottom(),
+                false);
+            g.setGradientFill(gradient);
+            g.fillRoundedRectangle(key.bounds.reduced(1.0f), 2.0f);
         }
         else
         {
-            // Pressed effect - slight glow
-            g.setColour(pressedBlackKeyColour_.brighter(0.3f).withAlpha(0.3f));
-            g.drawRoundedRectangle(key.bounds.expanded(1.0f), 3.0f, 2.0f);
+            // Pressed effect - beautiful gradient and slight glow
+            juce::ColourGradient gradient(
+                pressedBlackKeyColour_.darker(0.5f), key.bounds.getX(), key.bounds.getY(),
+                pressedBlackKeyColour_.brighter(0.2f), key.bounds.getX(), key.bounds.getBottom(),
+                false);
+            g.setGradientFill(gradient);
+            g.fillRoundedRectangle(key.bounds.reduced(1.0f), 2.0f);
+
+            // Pressed outline glow
+            g.setColour(pressedBlackKeyColour_.brighter(0.3f).withAlpha(0.4f));
+            g.drawRoundedRectangle(key.bounds.expanded(1.0f), 2.5f, 1.5f);
         }
         
         // Outline
