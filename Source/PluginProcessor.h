@@ -4,6 +4,8 @@
 #include "chord_detection/api/JuceChordDetector.h"
 #include <atomic>
 #include <memory>
+#include <bitset>
+#include <vector>
 
 //==============================================================================
 /**
@@ -112,11 +114,18 @@ private:
     // Settings
     bool passMidiThrough_;
     
+    // Sustain pedal handling
+    bool sustainPedalDown_ = false;
+    std::bitset<128> sustainedNotes_;
+    
     // Cross-thread communication (lock-free)
     // Audio thread writes, UI thread reads
     std::atomic<ChordDetection::ChordCandidate*> currentChordPtr_;
     std::shared_ptr<ChordDetection::ChordCandidate> chordBuffer_[2];  // Double buffer
     std::atomic<int> chordBufferIndex_;  // written by audio thread, read by UI thread
+    
+    std::vector<int> activeNotesBuffer_[2]; // Double buffer for active notes
+    std::atomic<int> activeNotesBufferIndex_;
     
     mutable std::atomic<bool> newChordAvailable_;  // mutable for hasNewChord() const
     mutable std::atomic<bool> midiActivityFlag_;   // mutable for hasMidiActivity() const
