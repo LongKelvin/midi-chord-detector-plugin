@@ -52,6 +52,42 @@ endif()
 message(STATUS "Using JUCE from: ${JUCE_DIR}")
 add_subdirectory(${JUCE_DIR} JUCE EXCLUDE_FROM_ALL)
 
+# Override VST3 copy destination so builds work without admin privileges.
+# Defaults to the user-level VST3 folder on Windows ($APPDATA/VST3).
+# Pass -DJUCE_VST3_COPY_DIR_OVERRIDE="C:/Program Files/Common Files/VST3"
+# (as administrator) to install system-wide instead.
+if(WIN32)
+    if(DEFINED JUCE_VST3_COPY_DIR_OVERRIDE)
+        set_property(GLOBAL PROPERTY JUCE_VST3_COPY_DIR "${JUCE_VST3_COPY_DIR_OVERRIDE}")
+    else()
+        set_property(GLOBAL PROPERTY JUCE_VST3_COPY_DIR "$ENV{APPDATA}/VST3")
+    endif()
+    message(STATUS "VST3 copy destination: $<GENEX_EVAL:$<TARGET_PROPERTY:MidiChordDetector,JUCE_VST3_COPY_DIR>>")
+endif()
+
+#===============================================================================
+# Binary Resources — Bravura SMuFL font (required by NotationComponent.h)
+#
+# Run once before your first build:
+#   powershell -ExecutionPolicy Bypass -File setup_fonts.ps1
+#
+# build.ps1 calls this automatically; manual download:
+#   https://github.com/steinbergmedia/bravura/releases  →  redist/Bravura.otf
+#===============================================================================
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/fonts/Bravura.otf")
+    message(FATAL_ERROR
+        "Bravura.otf not found.\n"
+        "Run the setup script to download it automatically:\n"
+        "  powershell -ExecutionPolicy Bypass -File setup_fonts.ps1\n"
+        "Or download from: https://github.com/steinbergmedia/bravura/releases\n"
+        "and place the file at: ${CMAKE_CURRENT_SOURCE_DIR}/fonts/Bravura.otf")
+endif()
+
+juce_add_binary_data(BinaryData
+    SOURCES
+        fonts/Bravura.otf
+)
+
 #===============================================================================
 # VST3 Plugin Target
 #===============================================================================
@@ -82,8 +118,9 @@ target_sources(MidiChordDetector
         Source/chord_detection/detector/VoicingAnalyzer.cpp
         Source/chord_detection/detector/ChordFormatter.cpp
         Source/chord_detection/detector/NoteUtils.cpp
-        # UI components
+        # UI components (shared between plugin and standalone)
         Source/ui/ChordDisplayComponent.cpp
+        Source/ui/PianoKeyboardView.cpp
 )
 
 # Compile definitions
@@ -99,6 +136,7 @@ target_compile_definitions(MidiChordDetector
 # Link JUCE modules
 target_link_libraries(MidiChordDetector
     PRIVATE
+        BinaryData
         juce::juce_audio_utils
         juce::juce_audio_processors
     PUBLIC
@@ -137,6 +175,8 @@ target_sources(MidiChordDetectorStandalone
         Source/chord_detection/detector/VoicingAnalyzer.cpp
         Source/chord_detection/detector/ChordFormatter.cpp
         Source/chord_detection/detector/NoteUtils.cpp
+        # UI components (shared between plugin and standalone)
+        Source/ui/PianoKeyboardView.cpp
 )
 
 # Compile definitions for standalone

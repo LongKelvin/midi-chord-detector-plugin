@@ -11,10 +11,18 @@ MidiChordDetectorAudioProcessor::MidiChordDetectorAudioProcessor()
     , sampleRate_(44100.0)
     , passMidiThrough_(true)
     , chordBufferIndex_(0)
+    , activeNotesBufferIndex_(0)
 {
     // Initialize chord buffers with nullptr (empty state)
     chordBuffer_[0] = nullptr;
     chordBuffer_[1] = nullptr;
+    
+    // Initialize active notes buffers
+    activeNotesBuffer_[0] = std::vector<int>();
+    activeNotesBuffer_[1] = std::vector<int>();
+    
+    sustainPedalDown_ = false;
+    sustainedNotes_.reset();
     
     currentChordPtr_.store(nullptr, std::memory_order_release);
     newChordAvailable_.store(false, std::memory_order_release);
@@ -167,24 +175,55 @@ void MidiChordDetectorAudioProcessor::processBlock (juce::AudioBuffer<float>& bu
 
 void MidiChordDetectorAudioProcessor::processMidiMessage(const juce::MidiMessage& message)
 {
-    if (message.isNoteOn())
+    if (message.isController() && message.getControllerNumber() == 64)
     {
+        const bool pedalNowDown = (message.getControllerValue() >= 64);
+
+        if (!pedalNowDown && sustainPedalDown_)
+        {
+            // Release: flush all sustained notes
+            for (int i = 0; i < 128; ++i)
+            {
+                if (sustainedNotes_.test(static_cast<size_t>(i)))
+                {
+                    chordDetector_.removeNote(i);
+                }
+            }
+            sustainedNotes_.reset();
+        }
+
+        sustainPedalDown_ = pedalNowDown;
+    }
+    else if (message.isNoteOn())
+    {
+        sustainedNotes_.reset(static_cast<size_t>(message.getNoteNumber()));
         chordDetector_.addNote(message.getNoteNumber());
     }
     else if (message.isNoteOff())
     {
-        chordDetector_.removeNote(message.getNoteNumber());
+        if (sustainPedalDown_)
+        {
+            sustainedNotes_.set(static_cast<size_t>(message.getNoteNumber()));
+        }
+        else
+        {
+            chordDetector_.removeNote(message.getNoteNumber());
+        }
     }
     else if (message.isController())
     {
         // All notes off (CC 123)
         if (message.getControllerNumber() == 123)
         {
+            sustainedNotes_.reset();
+            sustainPedalDown_ = false;
             chordDetector_.clearNotes();
         }
     }
     else if (message.isAllNotesOff() || message.isAllSoundOff())
     {
+        sustainedNotes_.reset();
+        sustainPedalDown_ = false;
         chordDetector_.clearNotes();
     }
 }
@@ -203,6 +242,12 @@ void MidiChordDetectorAudioProcessor::publishChordResult(const std::shared_ptr<C
 
     // Flip the buffer index last — this is the commit point seen by UI.
     chordBufferIndex_.store(writeIndex, std::memory_order_release);
+
+    // Swap active notes buffer in the same lock-free double-buffered way
+    int notesReadIndex = activeNotesBufferIndex_.load(std::memory_order_acquire);
+    int notesWriteIndex = 1 - notesReadIndex;
+    activeNotesBuffer_[notesWriteIndex] = chordDetector_.getCurrentNotes();
+    activeNotesBufferIndex_.store(notesWriteIndex, std::memory_order_release);
 
     newChordAvailable_.store(true, std::memory_order_release);
 }
@@ -223,15 +268,21 @@ bool MidiChordDetectorAudioProcessor::hasMidiActivity() const
 {
     return midiActivityFlag_.exchange(false, std::memory_order_acq_rel);
 }
-
+std::vector<int> MidiChordDetectorAudioProcessor::getCurrentNotes() const
+{
+    int index = activeNotesBufferIndex_.load(std::memory_order_acquire);
+    return activeNotesBuffer_[index];
+}
 void MidiChordDetectorAudioProcessor::setSlashChordMode(ChordDetection::SlashChordMode mode)
 {
     chordDetector_.setSlashChordMode(mode);
+    publishChordResult(chordDetector_.getCurrentChord());
 }
 
 void MidiChordDetectorAudioProcessor::setMinimumNotes(int minNotes)
 {
     chordDetector_.setMinimumNotes(minNotes);
+    publishChordResult(chordDetector_.getCurrentChord());
 }
 
 //==============================================================================
