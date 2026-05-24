@@ -16,7 +16,7 @@
 MainComponent::MainComponent()
     : chordDetector(ChordDetection::SlashChordMode::Auto)
 {
-    setSize (800, 850);  // Increased height to accommodate keyboard
+    setSize (1040, 1040);  // Set Window size to 1040x1040 for a square layout
     
     // Configure the chord detector with defaults
     chordDetector.setMinimumNotes(2);
@@ -69,16 +69,6 @@ MainComponent::MainComponent()
     chordNameLabel.setJustificationType (juce::Justification::centred);
     chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::cyan);
     addAndMakeVisible (chordNameLabel);
-    
-    confidenceLabel.setText ("Confidence: --", juce::dontSendNotification);
-    confidenceLabel.setFont (juce::Font (16.0f));
-    confidenceLabel.setJustificationType (juce::Justification::centred);
-    addAndMakeVisible (confidenceLabel);
-    
-    bassNoteLabel.setText ("Bass: --", juce::dontSendNotification);
-    bassNoteLabel.setFont (juce::Font (16.0f));
-    bassNoteLabel.setJustificationType (juce::Justification::centred);
-    addAndMakeVisible (bassNoteLabel);
     
     //==========================================================================
     // Active notes section
@@ -167,13 +157,13 @@ void MainComponent::paint (juce::Graphics& g)
     g.drawHorizontalLine (130, 20.0f, (float) getWidth() - 20.0f);
     
     // Line below chord display section
-    g.drawHorizontalLine (340, 20.0f, (float) getWidth() - 20.0f);
+    g.drawHorizontalLine (290, 20.0f, (float) getWidth() - 20.0f);
     
     // Line below active notes section (before piano)
-    g.drawHorizontalLine (430, 20.0f, (float) getWidth() - 20.0f);
+    g.drawHorizontalLine (380, 20.0f, (float) getWidth() - 20.0f);
     
     // Line below piano keyboard section
-    g.drawHorizontalLine (550, 20.0f, (float) getWidth() - 20.0f);
+    g.drawHorizontalLine (480, 20.0f, (float) getWidth() - 20.0f);
 }
 
 void MainComponent::resized()
@@ -197,20 +187,15 @@ void MainComponent::resized()
     chordLabel.setBounds (bounds.removeFromTop (25));
     chordNameLabel.setBounds (bounds.removeFromTop (100));
     
-    auto infoRow = bounds.removeFromTop (25);
-    confidenceLabel.setBounds (infoRow.removeFromLeft (infoRow.getWidth() / 2));
-    bassNoteLabel.setBounds (infoRow);
-    bounds.removeFromTop (15); // Spacing
-    
     // Active notes section
     notesLabel.setBounds (bounds.removeFromTop (25));
     activeNotesLabel.setBounds (bounds.removeFromTop (25));
     pitchClassLabel.setBounds (bounds.removeFromTop (25));
     bounds.removeFromTop (15); // Spacing
     
-    // Piano keyboard section
-    pianoKeyboard.setBounds (bounds.removeFromTop (100));
-    bounds.removeFromTop (15); // Spacing
+    // Piano keyboard section — full-width, slightly shorter
+    pianoKeyboard.setBounds (bounds.removeFromTop (80));
+    bounds.removeFromTop (10); // Spacing
     
     // Debug section
     debugLabel.setBounds (bounds.removeFromTop (25));
@@ -256,26 +241,11 @@ void MainComponent::timerCallback()
         chordNameLabel.setText (juce::String (chord->chordName), juce::dontSendNotification);
         chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::cyan);
 
-        confidenceLabel.setText ("Confidence: " + juce::String (chord->confidence * 100.0f, 1) + "%",
-                                 juce::dontSendNotification);
-
-        if (!chord->pitchClasses.empty())
-        {
-            static const char* rootNames[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-            int bassPC = chord->pitchClasses[0];
-            bassNoteLabel.setText ("Bass: " + juce::String (rootNames[bassPC % 12]), juce::dontSendNotification);
-        }
-        else
-        {
-            bassNoteLabel.setText ("Bass: --", juce::dontSendNotification);
-        }
     }
     else
     {
         chordNameLabel.setText ("N.C.", juce::dontSendNotification);
         chordNameLabel.setColour (juce::Label::textColourId, juce::Colours::grey);
-        confidenceLabel.setText ("Confidence: --", juce::dontSendNotification);
-        bassNoteLabel.setText ("Bass: --", juce::dontSendNotification);
     }
 
     // -------------------------------------------------------------------------
