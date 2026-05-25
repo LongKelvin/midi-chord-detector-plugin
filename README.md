@@ -2,7 +2,7 @@
 
 A real-time MIDI chord detection VST3 plugin with **pattern-based interval matching** for jazz, live performance, and composition.
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue)
+![Version](https://img.shields.io/badge/version-3.1.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![VST3](https://img.shields.io/badge/VST3-Instrument-green)
 
@@ -10,12 +10,15 @@ A real-time MIDI chord detection VST3 plugin with **pattern-based interval match
 
 MIDI Chord Detector analyzes incoming MIDI notes and identifies chords in real-time using a pattern-based interval matching algorithm with 60+ chord patterns.
 
+![MIDI Chord Detector UI](Docs/images/midi-chord-main-window.png)
+
 **Key Features:**
 - 60+ chord patterns (triads, 7ths, 9ths, 11ths, 13ths, altered dominants)
 - Real-time detection with confidence scoring
 - Slash chord notation for inversions
 - Sustain pedal support
 - Zero latency MIDI pass-through
+- Toggleable panels: Keyboard, Notation (grand staff), Active Notes Monitor
 
 **Note:** This is a **VST3 Instrument** (not MIDI FX) for compatibility with Cubase AI/Elements and other DAWs.
 
@@ -115,4 +118,4 @@ Author: Long Kelvin - [GitHub](https://github.com/LongKelvin)
 
 ---
 
-**Version:** 3.0.0 | **Platform:** Windows | **Last Updated:** January 2026
+**Version:** 3.1.0 | **Platform:** Windows | **Last Updated:** May 2026

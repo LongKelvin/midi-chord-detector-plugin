@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 # Project version - single source of truth for version numbers
-set(PROJECT_VERSION "3.0.0")
+set(PROJECT_VERSION "3.1.0")
 
 project(MidiChordDetector VERSION ${PROJECT_VERSION})
 
