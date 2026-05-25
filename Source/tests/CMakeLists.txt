@@ -21,6 +21,11 @@ set(CHORD_DETECTION_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../chord_detection")
 
 set(CHORD_DETECTION_SOURCES
     ${CHORD_DETECTION_DIR}/detector/ChordDetector.cpp
+    ${CHORD_DETECTION_DIR}/detector/ChordPatterns.cpp
+    ${CHORD_DETECTION_DIR}/detector/ChordScoring.cpp
+    ${CHORD_DETECTION_DIR}/detector/VoicingAnalyzer.cpp
+    ${CHORD_DETECTION_DIR}/detector/ChordFormatter.cpp
+    ${CHORD_DETECTION_DIR}/detector/NoteUtils.cpp
 )
 
 # =============================================================================
