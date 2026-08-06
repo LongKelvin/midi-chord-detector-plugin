@@ -3,7 +3,7 @@
 A real-time MIDI chord detection VST3 plugin with **pattern-based interval matching** for jazz, live performance, and composition.
 
 ![Version](https://img.shields.io/badge/version-3.1.0-blue)
-![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)
 ![VST3](https://img.shields.io/badge/VST3-Instrument-green)
 
 ## Overview
@@ -69,20 +69,31 @@ MIDI Chord Detector analyzes incoming MIDI notes and identifies chords in real-t
 2. Extract `MIDI Chord Detector.vst3` to `C:\Program Files\Common Files\VST3\`
 3. Restart DAW and rescan plugins
 
-**From Source:**
+**From Source (Windows):**
 ```powershell
 .\build.ps1
 # Plugin will be in: build\MidiChordDetector_artefacts\Release\VST3\
 ```
 
-**Requirements:** Windows 10/11, Visual Studio 2022+, CMake 3.15+
+**From Source (macOS / Linux):**
+```bash
+./setup.sh        # fetches JUCE + Bravura font (one time)
+./build.sh        # configure + build + install VST3
+# Plugin will be in: build/MidiChordDetector_artefacts/Release/VST3/
+# and installed to:  ~/Library/Audio/Plug-Ins/VST3/   (macOS)
+```
+For a universal binary: `./build.sh --universal`.
+See [Docs/Build-macOS.md](Docs/Build-macOS.md) for full details and troubleshooting.
+
+**Requirements (Windows):** Windows 10/11, Visual Studio 2022+, CMake 3.15+
+**Requirements (macOS):** macOS 11+, Xcode Command Line Tools, CMake 3.15+ (`brew install cmake`)
 
 ## Known Limitations
 
 - **Ambiguous chords** - C6/Am7 share identical notes; algorithm uses scoring heuristics
 - **Sus chord ambiguity** - Csus2 vs Gsus4 without context
 - **Sparse voicings** - May misidentify incomplete voicings without harmonic context
-- **Platform** - Windows only, tested only with Cubase
+- **Platform** - Windows and macOS supported; primarily tested with Cubase (Windows) and Ableton Live (macOS)
 - **No user settings** - Engine parameters are hard-coded
 
 ## Troubleshooting
@@ -118,4 +129,4 @@ Author: Long Kelvin - [GitHub](https://github.com/LongKelvin)
 
 ---
 
-**Version:** 3.1.0 | **Platform:** Windows | **Last Updated:** May 2026
+**Version:** 3.1.0 | **Platform:** Windows | macOS | **Last Updated:** May 2026
