@@ -9,6 +9,11 @@ MidiChordDetector/Resources/JUCE/
 MidiChordDetector/Resources/juce-*/
 
 # ----------------------------------------------------------------------------
+# Local planning / design docs — not published to the repo
+# ----------------------------------------------------------------------------
+Feature-Docs/
+
+# ----------------------------------------------------------------------------
 # Build Directories & Artifacts
 # ----------------------------------------------------------------------------
 # Root build directory (contains all build artifacts including CMake and JUCE)
