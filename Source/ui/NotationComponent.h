@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../chord_detection/detector/NoteUtils.h"
+#include "MusicFont.h"
 #include <vector>
 #include <algorithm>
 #include <cmath>
@@ -76,21 +77,52 @@ public:
         const float S         = juce::jlimit(8.0f, 14.0f, availH / 12.0f);
         const float stepH     = S * 0.5f;
 
+        // Once S hits its clamp, a taller panel stops growing the staff
+        // itself but still has real height to spend — split that leftover
+        // evenly between "room above the treble staff" (higher notes, right
+        // hand) and "room below the bass staff" (lower notes, left hand) by
+        // nudging the whole staff block down from the top of the panel,
+        // instead of leaving it all pinned to the bottom margin.
+        const float nominalBlockH = 10.5f * S; // treble(4S) + gap(2.5S) + bass(4S)
+        const float verticalSlack = juce::jmax(0.0f, availH - nominalBlockH);
+        const float topOffset     = topPad + verticalSlack * 0.5f;
+
         // trebleBotY = E4 (bottom treble line)   bassTopY = A3 (top bass line)
         // Traditional grand staff gap = 2.5S  (Middle C sits ~1S below trebleBotY)
-        const float trebleBotY = panelY + topPad + 4.0f * S;
+        const float trebleBotY = panelY + topOffset + 4.0f * S;
         const float trebleTopY = trebleBotY - 4.0f * S;
         const float bassTopY   = trebleBotY + 2.5f * S;
         const float bassBotY   = bassTopY   + 4.0f * S;
 
         // Horizontal layout — staff spans full panel width minus margins
-        const float clefW      = S * 2.8f;
+        const float clefFontSz = S * MusicFont::Metrics::kStaffSpacesToFontSize;
+        const float clefW      = S * 0.5f
+                                + juce::jmax(MusicFont::Metrics::gClefAdvanceEm, MusicFont::Metrics::fClefAdvanceEm) * clefFontSz;
         const float hPad       = S * 0.9f;
         const float staffLeft  = panelX + hPad;
         const float staffRight = panelX + panelW - hPad - (showLabels_ ? S * 4.5f : S * 0.5f);
-        const float noteBaseX  = staffLeft + clefW + S * 0.6f;
+        // Extra breathing room between the clef and the first notehead column
+        // so wide/accidental-heavy chords don't crowd or overlap the clef.
+        const float noteBaseX  = staffLeft + clefW + S * 1.6f;
         const float noteW      = S * 1.3f;
         const float lineThk    = juce::jmax(0.8f, S * 0.10f);
+
+        // ── 3b. Ledger-line budget (drives when 8va/8vb kicks in) ─────────────
+        // Two different MIDI pitches must never render at the same staff
+        // position. Below the staff, that's automatic (getWhiteKeyStep() is
+        // monotonic in pitch), but 8va/8vb folds a note down by a full octave
+        // (7 diatonic steps) — so it only stays safe while it's used as a
+        // last resort, once real ledger-line space runs out, rather than a
+        // fixed step count applied regardless of how tall the panel actually
+        // is. Compute how many ledger steps actually fit in the space this
+        // panel has above the treble staff and below the bass staff, and
+        // only fold once a note goes beyond that.
+        const float topReserve   = S * 1.8f;  // keep the chord symbol clear of ledger lines
+        const float botReserve   = S * 0.4f;
+        const float topRoomPx    = juce::jmax(0.0f, trebleTopY - (panelY + topReserve));
+        const float botRoomPx    = juce::jmax(0.0f, (panelY + panelH - botReserve) - bassBotY);
+        const int   maxStepAbove = 10 + static_cast<int>(std::floor(topRoomPx / stepH));  // treble top line = step 10
+        const int   minStepBelow = -10 - static_cast<int>(std::floor(botRoomPx / stepH)); // bass bottom line = step -10
 
         // ── 4. Staff lines (always drawn) ─────────────────────────────────────
         g.setColour(staffCol);
@@ -110,23 +142,14 @@ public:
         drawVectorBrace(g, staffLeft - S * 0.25f, trebleTopY, bassBotY, S);
 
         // ── 5. Clef glyphs (always drawn) ─────────────────────────────────────
+        // Real Bravura glyphs, positioned at their SMuFL-standard baseline:
+        // gClef's spiral curls around the G4 line — the 2nd line from the
+        // bottom of the treble staff, not the bottom line itself — and
+        // fClef's two dots straddle the F3 line — the 2nd line from the top
+        // of the bass staff, not the top line itself.
         g.setColour(staffCol.brighter(0.5f));
-        // Treble clef — render rect anchored so G4 line sits at ~35% of glyph height
-        g.setFont(juce::Font(juce::FontOptions().withHeight(S * 4.6f)));
-        g.drawText(juce::String::charToString(0x1D11E),
-                   juce::roundToInt(staffLeft + S * 0.1f),
-                   juce::roundToInt(trebleBotY - S * 3.0f),
-                   juce::roundToInt(S * 2.8f),
-                   juce::roundToInt(S * 6.0f),
-                   juce::Justification::centredLeft, false);
-        // Bass clef — anchored to F3 line (bassTopY + S)
-        g.setFont(juce::Font(juce::FontOptions().withHeight(S * 3.0f)));
-        g.drawText(juce::String::charToString(0x1D122),
-                   juce::roundToInt(staffLeft + S * 0.15f),
-                   juce::roundToInt(bassTopY  - S * 0.3f),
-                   juce::roundToInt(S * 2.8f),
-                   juce::roundToInt(S * 2.8f),
-                   juce::Justification::centredLeft, false);
+        drawGlyph(g, MusicFont::Glyph::gClef, staffLeft + S * 0.15f, trebleBotY - S, clefFontSz, GlyphAnchor::baseline);
+        drawGlyph(g, MusicFont::Glyph::fClef, staffLeft + S * 0.15f, bassTopY   + S, clefFontSz, GlyphAnchor::baseline);
 
         // ── 6. Empty state hint (staff is already visible) ────────────────────
         if (notes_.empty())
@@ -164,8 +187,12 @@ public:
             rn.hasAcc   = rn.isSharp || rn.isFlat;
             rn.needs8va = rn.needs8vb = false;
 
-            while (rn.renderStep >=  13) { rn.renderStep -= 7; rn.needs8va = true; }
-            while (rn.renderStep <= -13) { rn.renderStep += 7; rn.needs8vb = true; }
+            // Fold only once a note goes past the ledger-line room this panel
+            // actually has (see §3b) — not a fixed step count. Genuinely
+            // distinct pitches keep genuinely distinct positions until we
+            // truly run out of vertical space to draw them in.
+            while (rn.renderStep > maxStepAbove) { rn.renderStep -= 7; rn.needs8va = true; }
+            while (rn.renderStep < minStepBelow) { rn.renderStep += 7; rn.needs8vb = true; }
 
             rn.y = (rn.renderStep >= 0)
                  ? trebleBotY - static_cast<float>(rn.renderStep - 2) * stepH
@@ -177,30 +204,38 @@ public:
         std::sort(rNotes.begin(), rNotes.end(),
                   [](const auto& a, const auto& b) { return a.midiNote < b.midiNote; });
 
-        // ── 8. Horizontal stagger for adjacent intervals ───────────────────────
+        // ── 8. Horizontal stagger for adjacent intervals (chain-aware zig-zag) ─
+        // Engraving convention for stacked seconds: each note that collides with
+        // its immediate neighbour flips to the opposite side, so a run of three+
+        // consecutive seconds (e.g. C-D-E clustered tight) zig-zags left/right
+        // instead of every colliding note piling onto the same offset column.
+        bool offsetSide = false;
         for (size_t i = 0; i < rNotes.size(); ++i)
         {
-            const float xOff = (i > 0 && std::abs(rNotes[i].y - rNotes[i-1].y) < S * 0.9f)
-                               ? noteW + S * 0.15f : 0.0f;
+            const bool collidesWithPrev = (i > 0) &&
+                (std::abs(rNotes[i].y - rNotes[i-1].y) < S * 0.9f);
+            offsetSide = collidesWithPrev ? !offsetSide : false;
+
+            const float xOff = offsetSide ? noteW + S * 0.15f : 0.0f;
             rNotes[i].x    = noteBaseX + xOff;
-            rNotes[i].accX = noteBaseX + xOff - S * 1.3f;
+            // Accidentals stack in their own column(s) immediately left of the
+            // leftmost notehead column; a note that's a close neighbour of the
+            // previous one and also carries an accidental gets pushed one
+            // column further left so the two accidentals don't collide.
+            rNotes[i].accX = noteBaseX - S * 1.3f;
             if (i > 0 && rNotes[i].hasAcc && rNotes[i-1].hasAcc
                 && std::abs(rNotes[i].y - rNotes[i-1].y) < S * 2.2f)
-                rNotes[i].accX -= S * 0.9f;
+                rNotes[i].accX = rNotes[i-1].accX - S * 0.9f;
         }
 
-        // ── 9. Chord name (above treble top, inside panel) ────────────────────
+        // ── 9. Chord symbol (above treble top, inside panel) ───────────────────
+        // Real jazz notation typography: root at full size, quality marker
+        // (m, °, ø, +, △) at full size immediately after it, and any
+        // extension/alteration digits (7, 9, ♭13, ♯11, ...) superscripted.
         if (chordName_.isNotEmpty())
         {
             const float nameSz = juce::jmax(11.0f, S * 1.05f);
-            g.setColour(ink);
-            g.setFont(juce::Font(juce::FontOptions().withHeight(nameSz)).boldened());
-            g.drawText(chordName_,
-                       juce::roundToInt(noteBaseX - S * 0.5f),
-                       juce::roundToInt(panelY + 5.0f),
-                       juce::roundToInt(panelW * 0.7f),
-                       juce::roundToInt(nameSz + 4.0f),
-                       juce::Justification::centredLeft, false);
+            drawChordSymbol(g, chordName_, noteBaseX - S * 0.5f, panelY + 5.0f, nameSz, ink);
         }
 
         // ── 10. 8va / 8vb bracket bounds ──────────────────────────────────────
@@ -238,9 +273,9 @@ public:
                                lx1, bassTopY + static_cast<float>(-s - 2) * stepH, lineThk * 1.4f);
 
             g.setColour(ink);
-            if (rn.isSharp) drawVectorSharp(g, rn.accX, rn.y, S);
-            if (rn.isFlat)  drawVectorFlat (g, rn.accX, rn.y, S);
-            drawVectorWholeNote(g, rn.x, rn.y, S, noteW);
+            if (rn.isSharp) drawGlyph(g, MusicFont::Glyph::accidentalSharp, rn.accX + S * 0.65f, rn.y, S * MusicFont::Metrics::kStaffSpacesToFontSize);
+            if (rn.isFlat)  drawGlyph(g, MusicFont::Glyph::accidentalFlat,  rn.accX + S * 0.55f, rn.y, S * MusicFont::Metrics::kStaffSpacesToFontSize);
+            drawGlyph(g, MusicFont::Glyph::noteheadWhole, rn.x + noteW * 0.5f, rn.y, S * MusicFont::Metrics::kStaffSpacesToFontSize);
         }
 
         // ── 12. 8va / 8vb brackets ────────────────────────────────────────────
@@ -307,54 +342,154 @@ private:
     }
 
     // =================================================================================
-    // 100% VECTOR GRAPHICS - GUARANTEES PERFECT "HENLE" LOOK WITHOUT FONTS
+    // SMuFL glyph rendering (Bravura) — noteheads, accidentals, chord-quality marks
     // =================================================================================
-    void drawVectorWholeNote(juce::Graphics& g, float x, float y, float S, float w) const
+
+    /**
+     * How a SMuFL glyph's draw position is interpreted:
+     * - centred: (x, y) is the glyph's visual centre. Correct for glyphs whose
+     *   ink is roughly symmetric about their design baseline (noteheads,
+     *   accidentals, chord-quality marks).
+     * - baseline: (x, y) is the glyph's left edge at its SMuFL design
+     *   baseline. Required for glyphs whose ink sits mostly above or below
+     *   their baseline (clefs) — centring those in a box misplaces them,
+     *   since the box centre isn't where the glyph's reference line is.
+     */
+    enum class GlyphAnchor { centred, baseline };
+
+    /** Draws a single SMuFL glyph at the given font size (px), per `anchor`. */
+    void drawGlyph(juce::Graphics& g, juce::juce_wchar glyph, float x, float y, float fontSize,
+                   GlyphAnchor anchor = GlyphAnchor::centred) const
     {
-        juce::Path p, inner;
-        p.addEllipse(0, 0, w, S);
-        inner.addEllipse(w * 0.35f, S * 0.15f, w * 0.3f, S * 0.7f);
-        p.setUsingNonZeroWinding(false);
-        p.addPath(inner);
-        // Rotate slightly for the classical chisel-pen look
-        p.applyTransform(juce::AffineTransform::rotation(-0.2f, w * 0.5f, S * 0.5f).translated(x, y - S * 0.5f));
-        g.fillPath(p);
+        g.setFont(MusicFont::bravuraFont(fontSize));
+        const auto text = juce::String::charToString(glyph);
+        if (anchor == GlyphAnchor::baseline)
+        {
+            g.drawSingleLineText(text, juce::roundToInt(x), juce::roundToInt(y));
+        }
+        else
+        {
+            auto box = juce::Rectangle<float>(fontSize * 1.6f, fontSize * 1.1f).withCentre({ x, y });
+            g.drawText(text, box, juce::Justification::centred, false);
+        }
     }
 
-    void drawVectorSharp(juce::Graphics& g, float x, float y, float S) const
+    /**
+     * One piece of a rendered chord symbol: either a plain text run (root name,
+     * bare "m" for minor, extension digits/alterations) or a single Bravura
+     * glyph (°, ø, +, △). `superscript` runs are drawn smaller and raised,
+     * matching how real notation software sets extensions/alterations.
+     */
+    struct ChordSymbolRun
     {
-        juce::Path p;
-        float w = S * 0.9f;
-        float h = S * 2.8f;
-        float thk = S * 0.12f;
-        // Verticals
-        p.addRectangle(0, S * 0.4f, thk, h * 0.8f);
-        p.addRectangle(w * 0.6f, 0, thk, h * 0.8f);
-        // Slants
-        juce::Path slant;
-        slant.startNewSubPath (-S * 0.2f, S * 1.1f);
-        slant.lineTo           (w  * 0.8f, S * 0.8f);
-        slant.lineTo           (w  * 0.8f, S * 1.1f);
-        slant.lineTo           (-S * 0.2f, S * 1.4f);
-        slant.closeSubPath();
-        p.addPath(slant);
-        slant.applyTransform(juce::AffineTransform::translation(0, S * 0.8f));
-        p.addPath(slant);
-        p.applyTransform(juce::AffineTransform::translation(x, y - S * 1.5f));
-        g.fillPath(p);
+        juce::String    text;
+        juce::juce_wchar glyph = 0;
+        bool            isGlyph = false;
+        bool            superscript = false;
+    };
+
+    /**
+     * Tokenizes a formatted chord name (e.g. "Cmaj7", "Fm7♭5", "Bdim7/D") into
+     * root / quality / extension / slash-bass runs for jazz-style typesetting.
+     * Operates purely on the text produced by ChordFormatter — the quality
+     * keywords below ("maj", "dim", "aug", "m7♭5", "m11♭5") are exactly the
+     * suffix vocabulary used in Source/chord_detection/detector/ChordPatterns.cpp,
+     * so a new pattern's suffix simply falls through to the generic case
+     * (superscripted as plain text) rather than needing this list updated too.
+     */
+    std::vector<ChordSymbolRun> tokenizeChordSymbol(const juce::String& chordName) const
+    {
+        std::vector<ChordSymbolRun> runs;
+        if (chordName.isEmpty())
+            return runs;
+
+        juce::String main = chordName;
+        juce::String bass;
+        const int slashPos = chordName.indexOfChar('/');
+        if (slashPos > 0)
+        {
+            main = chordName.substring(0, slashPos);
+            bass = chordName.substring(slashPos + 1);
+        }
+
+        // Root: a letter A-G optionally followed by a single ♯/♭ accidental.
+        int rootLen = main.isNotEmpty() ? 1 : 0;
+        if (rootLen > 0 && main.length() > 1)
+        {
+            const juce::juce_wchar c2 = main[1];
+            if (c2 == (juce::juce_wchar) 0x266F || c2 == (juce::juce_wchar) 0x266D) // ♯ / ♭
+                rootLen = 2;
+        }
+        const juce::String root   = main.substring(0, rootLen);
+        const juce::String suffix = main.substring(rootLen);
+
+        juce::String quality;             // baseline-size marker ("m", or empty if glyph used)
+        juce::juce_wchar qualityGlyph = 0; // 0 = no glyph, use `quality` text instead
+        juce::String extension;           // superscripted remainder
+
+        if (suffix == "m7♭5")            { qualityGlyph = MusicFont::Glyph::csymHalfDiminished; }
+        else if (suffix == "m11♭5")       { qualityGlyph = MusicFont::Glyph::csymHalfDiminished; extension = "11"; }
+        else if (suffix == "maj7")             { qualityGlyph = MusicFont::Glyph::csymMajorSeventh; }
+        else if (suffix.startsWith("maj"))     { qualityGlyph = MusicFont::Glyph::csymMajorSeventh; extension = suffix.substring(3); }
+        else if (suffix == "dim7")              { qualityGlyph = MusicFont::Glyph::csymDiminished; extension = "7"; }
+        else if (suffix == "dim")               { qualityGlyph = MusicFont::Glyph::csymDiminished; }
+        else if (suffix == "aug7")               { qualityGlyph = MusicFont::Glyph::csymAugmented; extension = "7"; }
+        else if (suffix == "aug")                { qualityGlyph = MusicFont::Glyph::csymAugmented; }
+        else if (suffix.startsWith("m") && !suffix.startsWith("maj"))
+        {
+            quality = "m";
+            extension = suffix.substring(1);
+        }
+        else
+        {
+            extension = suffix; // dominant family, sus/add/alt/quartal, power chords: all superscripted
+        }
+
+        runs.push_back({ root, 0, false, false });
+        if (qualityGlyph != 0)
+            runs.push_back({ {}, qualityGlyph, true, false });
+        else if (quality.isNotEmpty())
+            runs.push_back({ quality, 0, false, false });
+        if (extension.isNotEmpty())
+            runs.push_back({ extension, 0, false, true });
+        if (bass.isNotEmpty())
+        {
+            runs.push_back({ "/", 0, false, false });
+            runs.push_back({ bass, 0, false, false });
+        }
+        return runs;
     }
 
-    void drawVectorFlat(juce::Graphics& g, float x, float y, float S) const
+    /** Lays out and draws a tokenized chord symbol starting at (x, yTop). */
+    void drawChordSymbol(juce::Graphics& g, const juce::String& chordName,
+                          float x, float yTop, float nameSz, juce::Colour colour) const
     {
-        juce::Path p;
-        float w = S * 0.8f;
-        p.addRectangle(0, 0, S * 0.12f, S * 2.5f);
-        // Teardrop bezier
-        p.startNewSubPath(0, S * 1.5f);
-        p.cubicTo(w * 1.2f, S * 1.0f, w * 1.3f, S * 2.2f, 0, S * 2.4f);
-        p.cubicTo(w * 0.6f, S * 2.1f, w * 0.4f, S * 1.8f, 0, S * 1.8f);
-        p.applyTransform(juce::AffineTransform::translation(x, y - S * 1.8f));
-        g.fillPath(p);
+        const auto runs = tokenizeChordSymbol(chordName);
+        const float superSz   = nameSz * 0.62f;
+        const float superRise = nameSz * 0.22f; // raise superscripted extensions above the baseline
+        float cursorX = x;
+
+        g.setColour(colour);
+        for (const auto& run : runs)
+        {
+            if (run.isGlyph)
+            {
+                const float glyphSz = nameSz * 4.6f;
+                drawGlyph(g, run.glyph, cursorX + glyphSz * 0.34f, yTop + nameSz * 0.42f, glyphSz);
+                cursorX += glyphSz * 0.68f;
+                continue;
+            }
+
+            const float sz = run.superscript ? superSz : nameSz;
+            const float y  = run.superscript ? yTop - superRise : yTop;
+            auto font = juce::Font(juce::FontOptions(sz)).boldened();
+            g.setFont(font);
+            const float w = juce::GlyphArrangement::getStringWidth(font, run.text) + 1.0f;
+            g.drawText(run.text, juce::roundToInt(cursorX), juce::roundToInt(y),
+                       juce::roundToInt(w) + 2, juce::roundToInt(sz + 4.0f),
+                       juce::Justification::centredLeft, false);
+            cursorX += w;
+        }
     }
 
     void drawVectorBrace(juce::Graphics& g, float x, float topY, float botY, float S) const
