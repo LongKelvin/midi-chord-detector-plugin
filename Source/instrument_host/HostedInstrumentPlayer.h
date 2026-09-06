@@ -79,13 +79,23 @@ public:
     /** Serializes {plugin identity + plugin's own state} for the host's project file. */
     void getStateInformation(juce::MemoryBlock& destData) const;
 
-    /** Restores a previously saved hosted instrument. Message thread only. */
+    /**
+     * Restores a previously saved hosted instrument. Safe to call from any
+     * thread: some hosts restore state from a background loading thread, so
+     * this defers the actual load/unload (which need message-thread
+     * affinity) via juce::MessageManager::callAsync when necessary.
+     */
     void setStateInformation(const void* data, int sizeInBytes);
 
 private:
     class EditorWindow;
 
     void applyPendingStateToInstance(juce::AudioPluginInstance& newInstance);
+
+    // Generous upper bound on the channel count of any hosted instrument,
+    // used to size scratchBuffer_ once (on the message thread) so
+    // renderNextBlock() never needs to grow it on the audio thread.
+    static constexpr int kMaxHostedChannels = 32;
 
     juce::AudioPluginFormatManager formatManager_;
     std::unique_ptr<juce::AudioPluginInstance> instance_;

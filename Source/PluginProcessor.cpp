@@ -125,7 +125,9 @@ void MidiChordDetectorAudioProcessor::releaseResources()
 
 bool MidiChordDetectorAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-    // VST3 Instrument: Accept mono or stereo output (we output silence anyway)
+    // VST3 Instrument: Accept mono or stereo output. Output carries the
+    // hosted sound-engine instrument's audio (see instrumentHost_), or
+    // silence if none is loaded.
     const auto& mainOutput = layouts.getMainOutputChannelSet();
     return mainOutput == juce::AudioChannelSet::mono()
         || mainOutput == juce::AudioChannelSet::stereo();

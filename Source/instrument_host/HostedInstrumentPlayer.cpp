@@ -47,7 +47,12 @@ void HostedInstrumentPlayer::prepare(double sampleRate, int maximumBlockSize, in
     blockSize_ = maximumBlockSize;
     numOutputChannels_ = juce::jmax(1, numOutputChannels);
 
-    scratchBuffer_.setSize(numOutputChannels_, blockSize_);
+    // Pre-allocate generously here (message thread) so renderNextBlock()
+    // (audio thread) never has to grow this buffer: a hosted instrument's
+    // channel count is only known once it's loaded, and AudioBuffer::setSize
+    // with avoidReallocating=true only avoids reallocating when the
+    // requested size fits within what's already allocated.
+    scratchBuffer_.setSize(juce::jmax(numOutputChannels_, kMaxHostedChannels), blockSize_);
     scratchMidi_.ensureSize(2048);
 
     const juce::SpinLock::ScopedLockType lock(swapLock_);
@@ -82,8 +87,10 @@ bool HostedInstrumentPlayer::loadPlugin(const juce::File& pluginFile, juce::Stri
     }
 
     // A bundle can expose several sub-plugins (e.g. an FX + instrument pair);
-    // prefer the first one that identifies itself as an instrument.
-    const juce::PluginDescription* chosen = found.getFirst();
+    // only an instrument can generate sound from MIDI, so require one rather
+    // than silently falling back to an effect that would load "successfully"
+    // and never make a sound.
+    const juce::PluginDescription* chosen = nullptr;
     for (auto* description : found)
     {
         if (description->isInstrument)
@@ -91,6 +98,13 @@ bool HostedInstrumentPlayer::loadPlugin(const juce::File& pluginFile, juce::Stri
             chosen = description;
             break;
         }
+    }
+
+    if (chosen == nullptr)
+    {
+        errorMessage = "\"" + pluginFile.getFullPathName()
+                     + "\" does not contain a sound-generating instrument (only effects were found).";
+        return false;
     }
 
     auto newInstance = formatManager_.createPluginInstance(*chosen, sampleRate_, blockSize_, errorMessage);
@@ -190,7 +204,17 @@ void HostedInstrumentPlayer::renderNextBlock(juce::AudioBuffer<float>& hostBuffe
         return;
 
     const int numSamples = hostBuffer.getNumSamples();
-    const int hostedChannels = juce::jmax(1, instance_->getTotalNumOutputChannels());
+
+    // scratchBuffer_'s capacity is fixed (allocated on the message thread in
+    // prepare()). Never grow it here -- if a block ever arrives larger than
+    // what prepare() announced, skip rendering this block rather than
+    // allocating on the audio thread. Likewise clamp the channel count
+    // requested from the hosted instrument to what's actually allocated.
+    if (numSamples > scratchBuffer_.getNumSamples())
+        return;
+
+    const int hostedChannels = juce::jlimit(1, scratchBuffer_.getNumChannels(),
+                                             instance_->getTotalNumOutputChannels());
 
     scratchBuffer_.setSize(hostedChannels, numSamples, false, false, true);
     scratchBuffer_.clear();
@@ -238,22 +262,40 @@ void HostedInstrumentPlayer::setStateInformation(const void* data, int sizeInByt
 
     juce::ValueTree state = juce::ValueTree::fromXml(*xml);
     const juce::String pluginFile = state.getProperty("pluginFile").toString();
-    if (pluginFile.isEmpty())
-        return;
 
     juce::MemoryBlock instanceState;
     instanceState.fromBase64Encoding(state.getProperty("instanceState").toString());
-    pendingInstanceState_ = instanceState;
 
-    juce::String errorMessage;
-    if (! loadPlugin(juce::File(pluginFile), errorMessage))
+    // loadPlugin()/unloadPlugin() require message-thread affinity (JUCE's
+    // plugin scanning/instantiation assumes it), but some hosts call
+    // setStateInformation() from a background project-loading thread --
+    // defer the actual restore instead of assuming we're already on it.
+    auto restore = [this, pluginFile, instanceState]
     {
-        // The saved instrument couldn't be found/loaded on this machine
-        // (moved, uninstalled, different plugin folder, ...). Drop the
-        // pending state -- the chord detector still works standalone.
-        pendingInstanceState_.reset();
-        juce::Logger::writeToLog("HostedInstrumentPlayer: failed to restore \"" + pluginFile + "\": " + errorMessage);
-    }
+        if (pluginFile.isEmpty())
+        {
+            // The saved state had no instrument loaded -- match that,
+            // rather than leaving a previously-loaded instrument in place.
+            unloadPlugin();
+            return;
+        }
+
+        pendingInstanceState_ = instanceState;
+        juce::String errorMessage;
+        if (! loadPlugin(juce::File(pluginFile), errorMessage))
+        {
+            // The saved instrument couldn't be found/loaded on this machine
+            // (moved, uninstalled, different plugin folder, ...). Drop the
+            // pending state -- the chord detector still works standalone.
+            pendingInstanceState_.reset();
+            juce::Logger::writeToLog("HostedInstrumentPlayer: failed to restore \"" + pluginFile + "\": " + errorMessage);
+        }
+    };
+
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
+        restore();
+    else
+        juce::MessageManager::callAsync(restore);
 }
 
 } // namespace InstrumentHost
