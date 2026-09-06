@@ -23,7 +23,7 @@ This document provides a high-level technical overview for developers who want t
 
 ### What This Plugin Does
 
-MIDI Chord Detector is a **VST3 Instrument plugin** that analyzes incoming MIDI notes and detects the chord being played using a pattern-based interval matching algorithm. It displays the chord name in real-time as you play.
+MIDI Chord Detector is a **VST3 Instrument plugin** that analyzes incoming MIDI notes and detects the chord being played using a pattern-based interval matching algorithm. It displays the chord name in real-time as you play, and can optionally host a third-party VST3 instrument in-process to produce audible sound from those same notes.
 
 **Key features:**
 
@@ -33,6 +33,7 @@ MIDI Chord Detector is a **VST3 Instrument plugin** that analyzes incoming MIDI 
 - Slash chord notation for inversions (configurable)
 - Voicing classification (close, open, drop-2, drop-3, rootless)
 - Low latency, suitable for live performance
+- Optional sound engine: load a VST3 instrument (Kontakt, Groove Agent, HALion, ...) in-process for audio output (see [4.8 HostedInstrumentPlayer](#48-hostedinstrumentplayer-sound-engine))
 
 ### Why VST3 Instrument (Not MIDI FX)?
 
@@ -40,7 +41,7 @@ This plugin is intentionally a **VST3 Instrument**, not a MIDI Effect. This is a
 
 - **Cubase AI / Elements** (commonly bundled with audio interfaces) does not support MIDI FX plugins
 - VST3 Instruments receive MIDI input reliably across all major DAWs
-- The plugin does not synthesize audio; it only analyzes MIDI and displays results
+- The plugin does not synthesize audio itself; it analyzes MIDI, displays results, and can optionally host a third-party instrument for sound
 - MIDI pass-through is implemented to forward notes to downstream instruments
 
 ### Supported DAWs
@@ -58,7 +59,7 @@ This plugin is intentionally a **VST3 Instrument**, not a MIDI Effect. This is a
 
 | Constraint | Reason |
 |------------|--------|
-| No audio synthesis | This is a display-only chord analyzer |
+| No built-in audio synthesis | Sound comes from an optional hosted VST3 instrument, not a custom engine |
 | Real-time safe | No heap allocations in audio thread |
 | Deterministic | Same input always produces same output |
 | MIDI-only | No audio analysis; pitch detection is not in scope |
@@ -198,6 +199,7 @@ Main JUCE audio processor for the VST3 plugin.
 - Track note on/off and sustain pedal (CC64)
 - Trigger chord detection on note changes
 - Pass MIDI through unchanged (for downstream instruments)
+- Forward the same MIDI into the hosted sound-engine instrument, if loaded (see [4.8](#48-hostedinstrumentplayer-sound-engine))
 - Communicate chord results to UI thread atomically
 
 **Key Methods:**
@@ -339,6 +341,54 @@ UI component for displaying detected chords.
 - Render chord name
 - Show confidence and additional info
 - Update on timer (polls from audio thread)
+
+### 4.8 HostedInstrumentPlayer (Sound Engine)
+
+**File:** `Source/instrument_host/HostedInstrumentPlayer.h/.cpp`
+
+In-process VST3 sub-host. The plugin does not synthesize audio itself;
+instead this component lets it host a single third-party VST3 instrument
+(Kontakt, Groove Agent, HALion, etc.) so the plugin can produce audible
+output while still showing the detected chord.
+
+**Why sub-hosting instead of a built-in synth engine:** a VST3/AU/AAX plugin
+has no host API to create tracks or load plugins into the DAW's mixer for
+the user — that's host-owned, by design, in every DAW. In-process hosting
+(via JUCE's `AudioPluginFormatManager`) is the one mechanism a plugin
+actually has to produce real, user-chosen sound without reimplementing a
+sampler/synth engine, at the cost of taking on plugin-hosting complexity
+directly (see prior art: Scaler 2, Captain Chords use the same approach).
+
+**Responsibilities:**
+
+- Scan a `.vst3` file/bundle and instantiate its instrument sub-plugin
+- Forward the same MIDI stream driving chord detection into the hosted
+  instrument, and mix its rendered audio into the plugin's own output
+- Own the hosted instrument's native editor window (its own patch/sound browser)
+- Serialize {which plugin, its own state} into this plugin's state so a DAW
+  project reload restores the loaded instrument and patch
+
+**Key Methods:**
+
+```cpp
+bool loadPlugin(const juce::File& pluginFile, juce::String& errorMessage);
+void unloadPlugin();
+void renderNextBlock(juce::AudioBuffer<float>& hostBuffer, const juce::MidiBuffer& midiIn);
+void showEditorWindow(const juce::String& windowTitle);
+```
+
+**Real-Time Safety:**
+- `loadPlugin()` / `unloadPlugin()` / editor-window management run on the
+  message thread only.
+- `renderNextBlock()` (audio thread) takes a non-blocking try-lock against
+  the hosted instance; if a load/unload swap is in flight, that block
+  renders silence rather than blocking — the same brief-glitch tradeoff any
+  DAW makes when a plugin is swapped live.
+
+**Current Limitation:** plugin instantiation uses JUCE's synchronous
+`createPluginInstance`, so loading a heavyweight instrument can briefly
+block the UI thread. Moving to JUCE's async instantiation API is a
+follow-up, not required for correctness.
 
 ---
 

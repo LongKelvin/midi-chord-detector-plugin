@@ -32,13 +32,35 @@ MidiChordDetectorAudioProcessorEditor::MidiChordDetectorAudioProcessorEditor (Mi
     debugToggle_.setButtonText("INFO");
 #endif
     addAndMakeVisible(debugToggle_);
-    
+
     // Configure buttons in synth-style
     styleToggle(keyboardToggle_, showKeyboard_);
     styleToggle(notationToggle_, showNotation_);
     styleToggle(playedNotesToggle_, showPlayedNotes_);
     styleToggle(debugToggle_, showDebugPanel_);
-    
+
+    // Sound engine controls
+    addAndMakeVisible(instrumentNameLabel_);
+    instrumentNameLabel_.setJustificationType(juce::Justification::centredRight);
+    instrumentNameLabel_.setColour(juce::Label::textColourId, juce::Colour(0xff8c90a1));
+    instrumentNameLabel_.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+
+    addAndMakeVisible(loadInstrumentButton_);
+    addAndMakeVisible(editInstrumentButton_);
+    addAndMakeVisible(unloadInstrumentButton_);
+    styleToggle(loadInstrumentButton_, false);
+    styleToggle(editInstrumentButton_, false);
+    styleToggle(unloadInstrumentButton_, false);
+
+    loadInstrumentButton_.onClick = [this] { loadInstrumentClicked(); };
+    editInstrumentButton_.onClick = [this] { audioProcessor.showInstrumentEditor(); };
+    unloadInstrumentButton_.onClick = [this]
+    {
+        audioProcessor.unloadInstrumentPlugin();
+        updateInstrumentControls();
+    };
+    updateInstrumentControls();
+
     // Button Click Listeners (modular toggle system)
     keyboardToggle_.onClick = [this] {
         showKeyboard_ = !showKeyboard_;
@@ -124,7 +146,14 @@ void MidiChordDetectorAudioProcessorEditor::resized()
     playedNotesToggle_.setBounds(btnArea.removeFromRight(buttonWidth).reduced(padding / 2, 0));
     notationToggle_.setBounds(btnArea.removeFromRight(buttonWidth).reduced(padding / 2, 0));
     keyboardToggle_.setBounds(btnArea.removeFromRight(buttonWidth).reduced(padding / 2, 0));
-    
+
+    // Sound engine controls, placed just left of the panel toggle group
+    auto instrumentArea = topArea.removeFromRight(430).reduced(0, (topArea.getHeight() - buttonHeight) / 2);
+    unloadInstrumentButton_.setBounds(instrumentArea.removeFromRight(80).reduced(padding / 2, 0));
+    editInstrumentButton_.setBounds(instrumentArea.removeFromRight(110).reduced(padding / 2, 0));
+    loadInstrumentButton_.setBounds(instrumentArea.removeFromRight(120).reduced(padding / 2, 0));
+    instrumentNameLabel_.setBounds(instrumentArea.reduced(padding / 2, 0));
+
     // Apply layout boundaries with clean padding
     bounds.reduce(12, 10);
     
@@ -200,6 +229,48 @@ void MidiChordDetectorAudioProcessorEditor::timerCallback()
         }
         previousNotes = currentNotes;
     }
+}
+
+void MidiChordDetectorAudioProcessorEditor::loadInstrumentClicked()
+{
+    instrumentFileChooser_ = std::make_unique<juce::FileChooser>(
+        "Select a VST3 instrument to use as the sound engine...",
+        juce::File(),
+        "*.vst3");
+
+    // VST3 plugins are a single file on Windows/Linux but a bundle
+    // (directory) on macOS, so both selection modes are enabled.
+    constexpr auto chooserFlags = juce::FileBrowserComponent::openMode
+                                 | juce::FileBrowserComponent::canSelectFiles
+                                 | juce::FileBrowserComponent::canSelectDirectories;
+
+    instrumentFileChooser_->launchAsync(chooserFlags, [this](const juce::FileChooser& chooser)
+    {
+        auto file = chooser.getResult();
+        if (file == juce::File())
+            return;
+
+        juce::String errorMessage;
+        if (! audioProcessor.loadInstrumentPlugin(file, errorMessage))
+        {
+            juce::NativeMessageBox::showMessageBoxAsync(
+                juce::MessageBoxIconType::WarningIcon,
+                "Could Not Load Sound Engine",
+                errorMessage.isNotEmpty() ? errorMessage : "The selected plugin could not be loaded.");
+        }
+
+        updateInstrumentControls();
+    });
+}
+
+void MidiChordDetectorAudioProcessorEditor::updateInstrumentControls()
+{
+    const bool loaded = audioProcessor.hasInstrumentLoaded();
+    instrumentNameLabel_.setText(loaded ? audioProcessor.getLoadedInstrumentName()
+                                         : juce::String("No sound engine loaded"),
+                                  juce::dontSendNotification);
+    editInstrumentButton_.setEnabled(loaded);
+    unloadInstrumentButton_.setEnabled(loaded);
 }
 
 void MidiChordDetectorAudioProcessorEditor::styleToggle (juce::TextButton& button, bool active)

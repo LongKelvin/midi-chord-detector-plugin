@@ -107,15 +107,20 @@ void MidiChordDetectorAudioProcessor::prepareToPlay (double sampleRate, int samp
     juce::ignoreUnused(samplesPerBlock);
     
     sampleRate_ = sampleRate;
-    
+
     // Reset detector state
     chordDetector_.clearNotes();
+
+    // Prepare the hosted sound-engine instrument (if any) for playback.
+    instrumentHost_.prepare(sampleRate, samplesPerBlock, getTotalNumOutputChannels());
 }
 
 void MidiChordDetectorAudioProcessor::releaseResources()
 {
     // Clear state when playback stops
     chordDetector_.clearNotes();
+
+    instrumentHost_.releaseResources();
 }
 
 bool MidiChordDetectorAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -168,7 +173,12 @@ void MidiChordDetectorAudioProcessor::processBlock (juce::AudioBuffer<float>& bu
         auto chord = chordDetector_.getCurrentChord();
         publishChordResult(chord);
     }
-    
+
+    // Drive the sound engine with the same notes powering chord detection,
+    // so what's heard always matches what's displayed. No-op if no
+    // instrument is loaded.
+    instrumentHost_.renderNextBlock(buffer, midiMessages);
+
     // Swap the processed MIDI buffer to output
     midiMessages.swapWith(processedMidi);
 }
@@ -286,6 +296,33 @@ void MidiChordDetectorAudioProcessor::setMinimumNotes(int minNotes)
 }
 
 //==============================================================================
+bool MidiChordDetectorAudioProcessor::loadInstrumentPlugin(const juce::File& pluginFile, juce::String& errorMessage)
+{
+    return instrumentHost_.loadPlugin(pluginFile, errorMessage);
+}
+
+void MidiChordDetectorAudioProcessor::unloadInstrumentPlugin()
+{
+    instrumentHost_.unloadPlugin();
+}
+
+bool MidiChordDetectorAudioProcessor::hasInstrumentLoaded() const
+{
+    return instrumentHost_.isLoaded();
+}
+
+juce::String MidiChordDetectorAudioProcessor::getLoadedInstrumentName() const
+{
+    return instrumentHost_.getLoadedPluginName();
+}
+
+void MidiChordDetectorAudioProcessor::showInstrumentEditor()
+{
+    auto name = instrumentHost_.getLoadedPluginName();
+    instrumentHost_.showEditorWindow(name.isNotEmpty() ? "Sound Engine - " + name : "Sound Engine");
+}
+
+//==============================================================================
 bool MidiChordDetectorAudioProcessor::hasEditor() const
 {
     return true;
@@ -299,19 +336,15 @@ juce::AudioProcessorEditor* MidiChordDetectorAudioProcessor::createEditor()
 //==============================================================================
 void MidiChordDetectorAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // Save plugin state (parameters, settings)
-    juce::ignoreUnused(destData);
-    
-    // TODO: Implement state saving if needed
-    // For now, plugin has no persistent state
+    // Persist the hosted sound-engine instrument (if any), including its own
+    // patch/state, so the DAW project restores it on reload.
+    // TODO: Persist our own settings (slash chord mode, minimum notes) too.
+    instrumentHost_.getStateInformation(destData);
 }
 
 void MidiChordDetectorAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // Restore plugin state
-    juce::ignoreUnused(data, sizeInBytes);
-    
-    // TODO: Implement state restoration if needed
+    instrumentHost_.setStateInformation(data, sizeInBytes);
 }
 
 //==============================================================================

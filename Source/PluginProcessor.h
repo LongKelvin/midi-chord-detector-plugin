@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "chord_detection/api/JuceChordDetector.h"
+#include "instrument_host/HostedInstrumentPlayer.h"
 #include <atomic>
 #include <memory>
 #include <bitset>
@@ -104,11 +105,43 @@ public:
      */
     void setMinimumNotes(int minNotes);
 
+    //==============================================================================
+    // Sound Engine (Hosted Instrument)
+    //
+    // The plugin itself does not synthesize audio -- instead it can host a
+    // single third-party VST3 instrument (Kontakt, Groove Agent, HALion, ...)
+    // in-process, forward the same MIDI driving chord detection into it, and
+    // mix its audio into this plugin's own output. See
+    // Docs/Technical-Design.md for the rationale.
+
+    /**
+     * Load a VST3 instrument to use as the sound engine, replacing any
+     * previously loaded instrument. Call from the message thread (e.g. a
+     * button click in the editor).
+     */
+    bool loadInstrumentPlugin(const juce::File& pluginFile, juce::String& errorMessage);
+
+    /** Unload the currently hosted instrument, if any. */
+    void unloadInstrumentPlugin();
+
+    /** True if a sound-engine instrument is currently loaded. */
+    bool hasInstrumentLoaded() const;
+
+    /** Display name of the loaded instrument, or an empty string if none. */
+    juce::String getLoadedInstrumentName() const;
+
+    /** Opens the hosted instrument's own native editor window (patch/sound browser). */
+    void showInstrumentEditor();
+
 private:
     //==============================================================================
     // Chord detector using new pattern-based algorithm
     ChordDetection::JuceChordDetector chordDetector_;
-    
+
+    // Sound engine: hosts one third-party VST3 instrument in-process so the
+    // plugin can produce audio instead of MIDI-only pass-through.
+    InstrumentHost::HostedInstrumentPlayer instrumentHost_;
+
     double sampleRate_;
     
     // Settings

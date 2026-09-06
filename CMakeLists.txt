@@ -118,6 +118,8 @@ target_sources(MidiChordDetector
         Source/chord_detection/detector/VoicingAnalyzer.cpp
         Source/chord_detection/detector/ChordFormatter.cpp
         Source/chord_detection/detector/NoteUtils.cpp
+        # Sound engine: in-process VST3 instrument hosting (Kontakt, Groove Agent, HALion, ...)
+        Source/instrument_host/HostedInstrumentPlayer.cpp
         # UI components (shared between plugin and standalone)
         Source/ui/ChordDisplayComponent.cpp
         Source/ui/PianoKeyboardView.cpp
@@ -131,6 +133,9 @@ target_compile_definitions(MidiChordDetector
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
         JUCE_REPORT_APP_USAGE=0
+        # Enables in-process hosting of third-party VST3 instruments
+        # (Kontakt, Groove Agent, HALion, ...) as the plugin's sound engine.
+        JUCE_PLUGINHOST_VST3=1
 )
 
 # Link JUCE modules

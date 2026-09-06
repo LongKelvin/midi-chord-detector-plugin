@@ -28,30 +28,41 @@ public:
 private:
     // Timer callback for polling chord updates
     void timerCallback() override;
-    
+
     // Helper to style buttons in synth-style
     void styleToggle (juce::TextButton& button, bool active);
-    
+
+    // Sound engine (hosted VST3 instrument) controls
+    void loadInstrumentClicked();
+    void updateInstrumentControls();
+
     // Reference to processor
     MidiChordDetectorAudioProcessor& audioProcessor;
-    
+
     // UI components
     ChordDisplayComponent chordDisplay_;
     NotationComponent notation_;
     PlayedNotesComponent playedNotes_;
     PianoKeyboardView pianoKeyboard_;
-    
+
     // Toolbar toggle buttons
     juce::TextButton keyboardToggle_{ "KEYBOARD" };
     juce::TextButton notationToggle_{ "NOTATION" };
     juce::TextButton playedNotesToggle_{ "MONITOR" };
     juce::TextButton debugToggle_{ "DEBUG" };
-    
+
+    // Sound engine controls (load/edit/unload a hosted VST3 instrument)
+    juce::Label instrumentNameLabel_;
+    juce::TextButton loadInstrumentButton_{ "LOAD SOUND" };
+    juce::TextButton editInstrumentButton_{ "EDIT SOUND" };
+    juce::TextButton unloadInstrumentButton_{ "UNLOAD" };
+    std::unique_ptr<juce::FileChooser> instrumentFileChooser_;
+
     // Toggle States
     bool showKeyboard_ = true;
     bool showNotation_ = true;
     bool showPlayedNotes_ = true;
     bool showDebugPanel_ = false;
-    
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiChordDetectorAudioProcessorEditor)
 };
